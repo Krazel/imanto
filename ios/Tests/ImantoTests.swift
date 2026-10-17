@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 import WebKit
 import AVFoundation
 @testable import Imanto
@@ -23,11 +24,11 @@ import AVFoundation
         let web = try XCTUnwrap(controller.web)
         // Real WKWebView executes the production IIFE bundle from local resources.
         var ready = false
-        for _ in 0..<100 {
-            if let value = try? await web.evaluateJavaScript("document.querySelectorAll('#cells button').length"), (value as? Int) == 25 { ready = true; break }
+        for _ in 0..<600 {
+            if controller.navigationReady, let value = try? await web.evaluateJavaScript("document.querySelectorAll('#cells button').length===25 && document.querySelector('#board').getAttribute('aria-busy')==='false'"), (value as? Bool) == true { ready = true; break }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
-        XCTAssertTrue(ready, "Offline game must create all 25 cells")
+        XCTAssertTrue(ready, "Offline game must become playable. Navigation: \(controller.navigationReady), error: \(controller.navigationError ?? "none"), scripts: \(controller.scriptErrors)")
         guard ready else { return }
         let result = try await web.evaluateJavaScript("JSON.stringify({lang:document.documentElement.lang,native:!!window.webkit.messageHandlers.imantoAudio,webAudio:!!document.querySelector('audio'),overflow:document.documentElement.scrollWidth>innerWidth,tiles:document.querySelectorAll('#tray button').length})") as? String
         XCTAssertNotNil(result)
@@ -37,10 +38,15 @@ import AVFoundation
         XCTAssertEqual(values["webAudio"] as? Bool, false)
         XCTAssertEqual(values["overflow"] as? Bool, false)
         XCTAssertEqual(values["tiles"] as? Int, 3)
+        let before = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('krazel-imanes-main-v6')).turns") as? Int
         _ = try await web.evaluateJavaScript("document.querySelector('#tray button:not(:disabled)').click(); document.querySelector('#cells button:not(:disabled)').click(); true")
-        try await Task.sleep(nanoseconds: 700_000_000)
-        let occupied = try await web.evaluateJavaScript("document.querySelectorAll('#pieces .tile').length") as? Int
-        XCTAssertGreaterThan(occupied ?? 0, 0)
+        for _ in 0..<100 {
+            try await Task.sleep(nanoseconds: 100_000_000)
+            if let value = try? await web.evaluateJavaScript("document.querySelector('#board').getAttribute('aria-busy')==='false'"), (value as? Bool) == true { break }
+        }
+        let after = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('krazel-imanes-main-v6')).turns") as? Int
+        XCTAssertNotNil(before)
+        XCTAssertEqual(after, (before ?? -1) + 1, "A native-host placement must commit exactly one turn")
         XCTAssertFalse(web.configuration.preferences.isTextInteractionEnabled)
         _ = try await web.evaluateJavaScript("document.querySelector('#pause').click(); document.querySelector('#menu').open")
         let menu = try await web.evaluateJavaScript("document.querySelector('#menu').open") as? Bool

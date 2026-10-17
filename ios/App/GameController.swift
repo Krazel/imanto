@@ -13,6 +13,9 @@ final class WeakHandler: NSObject, WKScriptMessageHandler {
 
 final class GameController: UIViewController, WKNavigationDelegate {
     private(set) var web: WKWebView!
+    private(set) var navigationReady = false
+    private(set) var navigationError: String?
+    private(set) var scriptErrors: [String] = []
     let audio = NativeAudio()
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,6 +25,10 @@ final class GameController: UIViewController, WKNavigationDelegate {
         let handler = WeakHandler(self)
         configuration.userContentController.add(handler, name: "imantoAudio")
         configuration.userContentController.add(handler, name: "imantoText")
+        #if DEBUG
+        configuration.userContentController.add(handler, name: "imantoDiagnostics")
+        configuration.userContentController.addUserScript(WKUserScript(source: "addEventListener('error',e=>window.webkit.messageHandlers.imantoDiagnostics.postMessage(String(e.message)));", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        #endif
         let policy = """
         (()=>{let last;const sync=()=>{const enabled=[...document.querySelectorAll('textarea,input,[contenteditable="true"]')].some(e=>!e.disabled&&e.getClientRects().length&&(!e.matches('input')||!['button','checkbox','radio','range','submit','hidden','color'].includes(e.type)));if(enabled!==last){last=enabled;window.webkit.messageHandlers.imantoText.postMessage(enabled)}};document.addEventListener('DOMContentLoaded',()=>{sync();new MutationObserver(sync).observe(document.body,{subtree:true,attributes:true,childList:true});addEventListener('resize',sync)});})();
         """
@@ -51,12 +58,18 @@ final class GameController: UIViewController, WKNavigationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(interrupted), name: AVAudioSession.interruptionNotification, object: nil)
     }
     func receive(_ message: WKScriptMessage) {
+        #if DEBUG
+        if message.name == "imantoDiagnostics", let error = message.body as? String { scriptErrors.append(error); NSLog("Imanto bundled script: %@", error); return }
+        #endif
         if message.name == "imantoText", let enabled = message.body as? Bool {
             if web.configuration.preferences.isTextInteractionEnabled != enabled { web.configuration.preferences.isTextInteractionEnabled = enabled }
         } else if message.name == "imantoAudio", let body = message.body as? [String: Any] {
             audio.receive(body)
         }
     }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     @objc private func suspend() { audio.active = false; audio.pause() }
     @objc private func resume() { audio.active = true; audio.reconcile() }
     @objc private func interrupted(_ notification: Notification) {
