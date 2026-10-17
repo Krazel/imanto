@@ -1,0 +1,23 @@
+IMANTO — AUDIO SOURCES
+
+Button: "Madera" — Kenney, Impact Sounds, CC0.
+https://kenney.nl/assets/impact-sounds
+Exact previously approved Krazel Studio library recording, ID tilt-ui.
+SHA256 695aa42e887d135ed9a88ea09c850eba67609f5e9db5711b2ed385bac567136a
+No new file processing.
+
+Placement, movement and line-clear candidates: Kenney, Interface Sounds 1.0.
+https://kenney.nl/assets/interface-sounds
+Creative Commons Zero 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+Original files drop_001.ogg, select_006.ogg and confirmation_002.ogg.
+Files unchanged; playback volume is adjustable. Original License.txt included.
+These are new audition choices, not entries approved for the Studio catalog.
+
+"Carefree" Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+https://creativecommons.org/licenses/by/4.0/
+Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037
+Download: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3
+ISRC USUAN1400037. Full original MP3, unchanged, adjustable playback volume.
+Optional music candidate, initially disabled. Repeats the complete recording;
+no claim of a seamless musical loop. No human approval of this Imanto music yet.

@@ -1,0 +1,26 @@
+name: Imanto native QA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main' && !github.event.repository.private
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: xcodebuild -version && npm ci && npm test && npm run build:ios
+      - run: brew install xcodegen && cd ios && xcodegen generate
+      - run: node scripts/native-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Imanto-native-QA-${{ github.sha }}
+          path: artifacts/qa/
+          retention-days: 1

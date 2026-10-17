@@ -1,0 +1,21 @@
+/* Alternative visual directions. Grid geometry, motion and rules stay shared. */
+:root[data-look=clean]{--cream:#fffcf6;--sand:#e4d7c5;--slot:#fffcf6;--ink:#392716;--muted:#715e4c}
+[data-look=clean] body{background:#fffcf6;font-family:Arial,Helvetica,sans-serif}
+[data-look=clean] .heading h1{font-family:Arial,Helvetica,sans-serif;letter-spacing:-.04em;font-weight:900}
+[data-look=clean] .board{border-width:3px;border-radius:10px;box-shadow:none}
+[data-look=clean] .cell,[data-look=clean] .tile,[data-look=clean] .choice .chip{border-radius:6px;box-shadow:none;border:0}
+[data-look=clean] .choice,[data-look=clean] .primary,[data-look=clean] .secondary,[data-look=clean] #help{border-radius:10px;box-shadow:none}
+[data-look=clean] dialog,[data-look=clean] .rule-card,[data-look=clean] .lab-panel fieldset{border-radius:12px;box-shadow:none}
+[data-look=clean] .icon-button{border-radius:10px}
+:root[data-look=soft]{--cream:#f5eadb;--sand:#e9d5b6;--slot:#fff8ed;--ink:#492710;--muted:#795a40}
+[data-look=soft] body{background:#f5eadb}
+[data-look=soft] .score-bar{background:#fff8ed;border-radius:20px;padding:9px 14px;margin-bottom:12px;min-height:81px;box-shadow:0 3px 10px #643b1810}
+[data-look=soft] .board{border-radius:24px;border-width:9px;box-shadow:0 4px 12px #603e221b,inset 0 1px #fff9}
+[data-look=soft] .cell,[data-look=soft] .tile{border-radius:13px}
+[data-look=soft] .cell{box-shadow:inset 0 1px #fff,0 2px 4px #603e221c}
+[data-look=soft] .choices{background:#fff8ed;border-radius:22px;padding:8px 0 9px;box-shadow:0 4px 10px #603e2212}
+[data-look=soft] .choices h2{margin-top:0}
+[data-look=soft] .icon-button{background:#fff8ed;box-shadow:0 3px 9px #603e2216}
+[data-look=soft] dialog{background:#fff8ed;border-radius:28px}
+[data-look=soft] .rule-card{background:#f5eadb}
+@media(max-width:350px){[data-look=soft] .score-bar{min-height:67px;padding:6px 10px}[data-look=soft] .choices{padding:5px 0 7px}}

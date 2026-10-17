@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {build} from 'esbuild';
+const root=path.resolve(import.meta.dirname,'..');
+const web=path.join(root,'web'),out=path.join(root,'ios/Web');
+fs.mkdirSync(out,{recursive:true});
+const result=await build({stdin:{contents:"import './appearance.mjs';import './app.mjs';",resolveDir:web},bundle:true,format:'iife',target:'safari16',write:false,legalComments:'inline'});
+let html=fs.readFileSync(path.join(web,'index.html'),'utf8');
+html=html.replace('<html lang="es">','<html lang="en">').replace(/<script type="module"[^>]*><\/script>/g,'');
+html=html.replace(/<link rel="stylesheet" href="([^"]+)">/g,(_,name)=>'<style>'+fs.readFileSync(path.join(web,name),'utf8')+'</style>');
+html=html.replace(/<details class="testing-links">[\s\S]*?<\/details>/,'');
+html=html.replace('</head>','<style>.audio-previews,.testing-links{display:none!important}html{-webkit-touch-callout:none}input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}.game{padding-bottom:18px}dialog{max-height:92svh}</style></head>');
+html=html.replace('</body>','<script>'+result.outputFiles[0].text.replaceAll('</script','<\\/script')+'</script></body>');
+fs.writeFileSync(path.join(out,'index.html'),html);
+console.log('Prepared self-contained offline Imanto: '+Buffer.byteLength(html)+' bytes; no network requests or module-loader dependency.');

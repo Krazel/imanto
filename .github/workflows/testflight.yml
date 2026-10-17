@@ -1,0 +1,44 @@
+name: Imanto TestFlight
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: imanto-testflight
+  cancel-in-progress: false
+jobs:
+  testflight:
+    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main' && !github.event.repository.private
+    runs-on: macos-26
+    environment: app-store-production
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: xcodebuild -version && xcrun --sdk iphoneos --show-sdk-version
+      - run: npm ci && npm test && npm run build:ios
+      - run: brew install xcodegen && cd ios && xcodegen generate
+      - name: Native offline, audio and gameplay tests on iPhone and iPad
+        run: node scripts/native-qa.mjs
+      - name: Sign, validate and upload owner-authorized beta
+        env:
+          IMANTO_DISTRIBUTION: testflight
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.ASC_PRIVATE_KEY_BASE64 }}
+          IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          IOS_APP_STORE_PROFILE_BASE64: ${{ secrets.IOS_APP_STORE_PROFILE_BASE64 }}
+        run: node scripts/build-testflight.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Imanto-0.13-build1-${{ github.sha }}
+          path: |
+            artifacts/testflight/
+            artifacts/qa/
+          retention-days: 1

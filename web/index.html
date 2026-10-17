@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff7eb">
+  <meta name="description" content="Coloca imanes, prepara tus empujes y completa líneas del mismo color. Un puzle de Krazel Games.">
+  <title>Imanto · Krazel Games</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="effects.css">
+  <link rel="stylesheet" href="looks.css">
+  <script type="module" src="appearance.mjs"></script>
+</head>
+<body>
+  <main class="game" aria-label="Imanto">
+    <a id="mode-back" class="back-link" href="/" hidden>‹ Volver al juego</a>
+    <header class="heading"><h1>IMANTO</h1><button id="pause" class="pause-button" aria-label="Pausar partida"><svg viewBox="0 0 18 20" aria-hidden="true"><rect x="3" y="3" width="4" height="14" rx="1.5"/><rect x="11" y="3" width="4" height="14" rx="1.5"/></svg><span id="pause-label">Pausa</span></button></header>
+    <p id="variant-name" class="variant-name" hidden></p>
+    <section id="quick-controls" class="quick-controls" aria-label="Acciones de prueba" hidden>
+      <button id="quick-primary" class="primary">Repetir animación</button>
+      <button id="quick-secondary" class="secondary">Preparar</button>
+      <label id="quick-speed-label">Velocidad<select id="quick-speed" aria-label="Velocidad de la animación"><option value="1">Normal</option><option value="2.5">Lenta</option></select></label>
+    </section>
+    <section class="score-bar" aria-label="Puntuación"><strong id="score">0</strong><span>PUNTOS</span><div class="round-info"><span id="round">RONDA 1</span><small id="remaining">3 fichas disponibles</small></div><b id="bonus" aria-hidden="true"></b></section>
+    <div id="board" class="board" aria-label="Tablero de cinco por cinco" aria-busy="false">
+      <div id="cells" class="cells"></div><div id="pieces" class="pieces" aria-hidden="true"></div><div id="preview" class="preview" aria-hidden="true"></div>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <section class="choices" aria-labelledby="choices-title"><h2 id="choices-title">TU TANDA</h2><div id="tray" class="tray"></div></section>
+    <section class="forecast" aria-label="Próxima tanda"><span>DESPUÉS</span><div id="next-hand"></div></section>
+    <footer>
+      <p class="legend" hidden>Sin desvíos · una expulsión simultánea</p><p class="line-rewards" hidden>1 línea: 50 · 2 a la vez: 200 · 3: 450</p>
+      <p id="variant-rule" class="variant-rule" hidden></p>
+      <a id="effects-link" class="text-button tool-link" href="?effects=1">Escenas de prueba</a><a id="lab-link" class="text-button tool-link" href="?lab=1">Laboratorio</a>
+      <nav class="variant-links" aria-label="Versiones de prueba"><p>COMPARAR REGLAS · PARTIDAS SEPARADAS</p><a href="?variant=no-turn" data-variant="no-turn">1. Sin desvíos</a><a href="?variant=no-row" data-variant="no-row">2. Sin empuje en fila</a><a href="?variant=simple" data-variant="simple">3. Solo directo</a><a href="/" data-variant="original">Original</a></nav>
+    </footer>
+  </main>
+  <dialog id="menu" aria-labelledby="menu-title">
+    <div class="dialog-content">
+      <button id="menu-close" class="icon-button close-button" aria-label="Cerrar pausa">×</button>
+      <p class="eyebrow">IMANTO</p><h2 id="menu-title">En pausa</h2><p id="menu-copy">Tu partida sigue aquí.</p>
+      <div id="menu-stats" class="menu-stats"><div><strong id="menu-score">0</strong><span>puntos</span></div><div><strong id="menu-round">Ronda 1</strong><span id="menu-turns"></span></div></div>
+      <p id="end-explanation" class="end-explanation" hidden></p>
+      <button id="continue" class="primary">Seguir jugando</button><button id="new-game" class="secondary">Nueva partida</button><button id="view-board" class="secondary outline" hidden>Ver tablero</button><button id="menu-help" class="text-button">Cómo jugar</button>
+      <details class="settings-panel"><summary>Ajustes</summary>
+        <label class="setting-row" for="language">Idioma<select id="language"><option value="auto">Automático (dispositivo)</option><option value="en">English</option><option value="es">Español</option></select></label>
+        <label class="setting-row"><span>Efectos de sonido</span><input id="sound-enabled" type="checkbox" checked></label>
+        <label class="setting-row"><span>Música</span><input id="music-enabled" type="checkbox"></label>
+        <label class="setting-slider" for="sound-volume">Volumen de efectos<input id="sound-volume" type="range" min="0" max="1" step="0.05" value="0.7"></label>
+        <label class="setting-slider" for="music-volume">Volumen de música<input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.15"></label>
+        <details class="audio-previews"><summary>Escuchar sonidos</summary><p>Sonidos nuevos en prueba. La música es opcional.</p><div class="audio-buttons"><button type="button" data-cue="button">Botón</button><button type="button" data-cue="place">Colocar</button><button type="button" data-cue="move">Desplazar</button><button type="button" data-cue="line">Completar línea</button><button type="button" id="music-play">Escuchar música</button><button type="button" id="music-stop">Parar música</button></div><p id="audio-status" role="status">Listo para escuchar.</p></details>
+        <details class="audio-credits"><summary>Créditos de audio</summary><p>Kenney · <a href="https://kenney.nl/assets/impact-sounds" target="_blank" rel="noopener">Impact Sounds</a> / <a href="https://kenney.nl/assets/interface-sounds" target="_blank" rel="noopener">Interface Sounds</a> · CC0.</p><p>“Carefree” Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037" target="_blank" rel="noopener">incompetech.com</a>). <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">Creative Commons Attribution 4.0</a>.</p></details>
+      </details>
+      <details class="testing-links"><summary>Pruebas del juego</summary><a href="?effects=1">Animaciones y escenas</a><a href="?lab=1">Laboratorio de imanes</a><a href="/designs.html">Todas las pantallas</a></details>
+    </div>
+  </dialog>
+  <dialog id="instructions" class="instructions-dialog" aria-labelledby="help-title">
+    <div class="dialog-content">
+      <button id="help-close-icon" class="icon-button close-button" aria-label="Cerrar ayuda">×</button>
+      <p class="eyebrow">IMANTO</p><h2 id="help-title">Cómo jugar</h2>
+      <div class="rule-cards">
+        <section class="rule-card"><div class="mini-board" data-illustration="choose" aria-hidden="true"></div><div><h3>1. Elige y coloca</h3><p>Cada tanda trae tres fichas. Colócalas en el orden que quieras. Al usar las tres recibes las de «Después».</p></div></section>
+        <section class="rule-card"><div class="mini-board" data-illustration="push" aria-hidden="true"></div><div><h3>2. Empuja una vez</h3><p>Solo empuja la ficha que colocas. Los vecinos se mueven a la vez, una casilla. Las diagonales no reaccionan.</p></div></section>
+        <section class="rule-card"><div class="mini-board" data-illustration="line" aria-hidden="true"></div><div><h3>3. Completa una línea</h3><p>Cinco del mismo color, en horizontal o vertical.</p></div></section>
+      </div>
+      <p id="movement-rule" class="rule-note">Si hay una fila bloqueando, solo se mueve la última con hueco. Sin desvíos.</p>
+      <div class="reward-strip" aria-label="Puntos por líneas simultáneas"><div>1 línea<strong>50</strong></div><div>2 líneas<strong>200</strong></div><div>3 líneas<strong>450</strong></div></div>
+      <p class="help-ending">La partida termina cuando ya no puedes formar líneas, aunque queden huecos.</p>
+      <button id="close-help" class="primary">Entendido</button>
+    </div>
+  </dialog>
+  <dialog id="restart-confirm" aria-labelledby="restart-title"><div class="dialog-content">
+    <button id="restart-close" class="icon-button close-button" aria-label="Cancelar nueva partida">×</button>
+    <p class="eyebrow">NUEVA PARTIDA</p><h2 id="restart-title">¿Empezar de nuevo?</h2><p>Tu partida actual se sustituirá.</p>
+    <button id="restart-yes" class="primary">Empezar de nuevo</button><button id="restart-no" class="secondary">Seguir jugando</button>
+  </div></dialog>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

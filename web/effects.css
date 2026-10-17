@@ -1,0 +1,32 @@
+.celebration-layer{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:visible}
+.celebration-card{position:absolute;left:50%;top:calc(100% + 4px);width:max-content;max-width:100%;min-height:30px;transform:translate(-50%,0);display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;padding:7px 10px;border:1px solid #e6cba2;border-radius:14px;background:#fff6df;box-shadow:0 4px 14px #50270f12;animation:celebration-in calc(220ms * var(--fx-speed,1)) ease-out both;white-space:nowrap}
+.celebration-card strong{font-size:clamp(15px,4.3vw,20px);font-weight:1000;line-height:1.15;color:var(--ink)}
+.celebration-card span{font-size:clamp(10px,2.7vw,12px);font-weight:700;color:#735027}
+.celebrating-combo .celebration-card{border-color:#78c1bc;background:#247e84;box-shadow:0 4px 16px #278a9120}
+.celebrating-combo .celebration-card strong{color:#fffaf1}.celebrating-combo .celebration-card span{color:#fff0bd}
+.celebrating-all .celebration-card{top:50%;width:88%;max-width:340px;min-height:90px;flex-direction:column;gap:8px;white-space:normal;padding:20px 12px;transform:translate(-50%,-50%);border:2px solid #edc05d;border-radius:22px;background:linear-gradient(135deg,#fffdf3,#fff0c6);box-shadow:0 10px 35px #50270f1c,0 0 40px #ffe8aa88;animation-name:celebration-center}
+.celebrating-all .celebration-card strong{font-size:clamp(23px,6vw,30px)}.celebrating-all .celebration-card span{font-size:13px}
+.game:has(.board.celebrating) .status{color:transparent}
+.tile.winning{z-index:3;animation:winning-charge calc(var(--fx-charge,340ms) * var(--fx-speed,1)) ease-out forwards;--win-glow:14px}
+.tile.winning-line{--win-glow:7px}.tile.winning-all{--win-glow:24px}
+.tile.winning.clear{animation:winning-burst calc(320ms * var(--fx-speed,1)) ease-in forwards}
+.win-beam{position:absolute;display:block;opacity:0;background:linear-gradient(90deg,transparent,#fff5c5db,transparent);box-shadow:0 0 18px #ffe17a;animation:win-beam calc(580ms * var(--fx-speed,1)) ease-out calc(var(--fx-charge,340ms) * var(--fx-speed,1)) both}
+.beam-row{left:0;top:calc(var(--line) * 20% + 1%);width:100%;height:18%}
+.beam-column{top:0;left:calc(var(--line) * 20% + 1%);height:100%;width:18%;background:linear-gradient(transparent,#fff5c5db,transparent)}
+.win-ring{position:absolute;left:50%;top:50%;width:35%;aspect-ratio:1;border:2px solid #fff3bb;border-radius:50%;box-shadow:0 0 20px #ffe69a;opacity:0;animation:win-ring calc(700ms * var(--fx-speed,1)) ease-out calc(var(--fx-charge,340ms) * var(--fx-speed,1)) both}
+.win-spark{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:2px;background:var(--spark-color);opacity:0;box-shadow:0 0 6px #fff3c6;animation:win-spark calc(750ms * var(--fx-speed,1)) ease-out calc((var(--fx-charge,340ms) + var(--spark-delay,0ms)) * var(--fx-speed,1)) both}
+.board.celebrating-all{animation:board-aura calc(1450ms * var(--fx-speed,1)) ease-out both}
+.celebrating-all .cell{animation:cell-aura calc(1450ms * var(--fx-speed,1)) ease-out both}
+.game.celebrating-all::before{content:"";position:absolute;inset:0;border-radius:24px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 50% 45%,#ffe7aa99,#c7f4e944 55%,transparent 85%);animation:game-aura calc(1450ms * var(--fx-speed,1)) ease-out both}
+.game.celebrating-all .score-bar strong{color:#217a80}
+@keyframes winning-charge{0%{filter:brightness(1);transform:scale(1)}50%{background:#ffd16c;filter:brightness(1.06)}100%{background:#fff2b5;box-shadow:0 0 var(--win-glow) #ffe18a,inset 0 0 0 2px #fff9;transform:scale(1.03)}}
+@keyframes winning-burst{0%{background:#fff2b5;transform:scale(1.03);opacity:1}40%{background:#fffce0;transform:scale(1.05)}100%{background:#ffe4a5;transform:scale(.2);opacity:0}}
+@keyframes celebration-in{from{opacity:0;transform:translate(-50%,5px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes celebration-center{from{opacity:0;transform:translate(-50%,-40%) scale(.85)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes win-beam{0%{opacity:0;filter:blur(6px)}25%{opacity:.8;filter:blur(0)}100%{opacity:0;filter:blur(8px)}}
+@keyframes win-ring{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}20%{opacity:.7}100%{opacity:0;transform:translate(-50%,-50%) scale(3)}}
+@keyframes win-spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}15%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(140deg) scale(.1)}}
+@keyframes board-aura{0%,100%{box-shadow:0 0 0 transparent;border-color:var(--sand)}35%,65%{box-shadow:0 0 35px #ffc86466,0 0 65px #70d5ca33;border-color:#ffe3a0}}
+@keyframes cell-aura{0%,100%{background:var(--slot)}40%,65%{background:#fff8d5;box-shadow:inset 0 0 15px #ffe59b}}
+@keyframes game-aura{0%,100%{opacity:0}35%,65%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.win-ring,.win-spark,.win-beam{display:none}.celebration-card,.tile.winning,.tile.winning.clear,.board.celebrating-all,.celebrating-all .cell,.game.celebrating-all::before{animation:none}.tile.winning{background:#fff2b5}.celebration-card{opacity:1}}
