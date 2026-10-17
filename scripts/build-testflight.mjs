@@ -56,7 +56,7 @@ try {
   const info = readPlist(path.join(app, 'Info.plist'));
   assert.equal(info.CFBundleIdentifier, cfg.bundleId);
   assert.equal(info.CFBundleShortVersionString, cfg.marketingVersion);
-  assert.equal(String(info.CFBundleVersion), cfg.buildNumber);
+  assert.equal(String(info.CFBundleVersion), String(cfg.buildNumber));
   assert.equal(info.ITSAppUsesNonExemptEncryption, false);
   assert(Number(info.DTSDKName.match(/\d+/)[0]) >= 26, 'iOS 26 SDK required');
   assert(fs.existsSync(path.join(app, 'PrivacyInfo.xcprivacy')), 'Missing privacy manifest');

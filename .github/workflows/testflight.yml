@@ -1,8 +1,15 @@
 name: Imanto TestFlight
 on:
   workflow_dispatch:
+    inputs:
+      qa_run_id:
+        description: 'Optional successful native QA run; shipping source and test harness must match exactly'
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: imanto-testflight
   cancel-in-progress: false
@@ -16,6 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -23,7 +31,14 @@ jobs:
       - run: npm ci && npm test && npm run build:ios
       - run: brew install xcodegen && cd ios && xcodegen generate
       - name: Native offline, audio and gameplay tests on iPhone and iPad
+        if: inputs.qa_run_id == ''
         run: node scripts/native-qa.mjs
+      - name: Verify successful native QA for identical shipping source
+        if: inputs.qa_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_RUN_ID: ${{ inputs.qa_run_id }}
+        run: node scripts/verify-native-qa.mjs
       - name: Sign, validate and upload owner-authorized beta
         env:
           IMANTO_DISTRIBUTION: testflight
