@@ -75,6 +75,7 @@ export const EN={
   'Tu tablero preparado · reproduce las siete jugadas':'Your board is ready · replay all seven moves',
   'Prueba preparada · coloca en el centro o reproduce':'Test ready · place in the center or press Replay'
 };
+EN['Vibración']='Haptics';
 export function resolveLanguage({override,preference='auto',languages=[]}={}){
   if(override==='en'||override==='es')return override;
   if(preference==='en'||preference==='es')return preference;

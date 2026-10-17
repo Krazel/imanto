@@ -47,6 +47,7 @@
         <label class="setting-row" for="language">Idioma<select id="language"><option value="auto">Automático (dispositivo)</option><option value="en">English</option><option value="es">Español</option></select></label>
         <label class="setting-row"><span>Efectos de sonido</span><input id="sound-enabled" type="checkbox" checked></label>
         <label class="setting-row"><span>Música</span><input id="music-enabled" type="checkbox"></label>
+        <label id="haptics-row" class="setting-row" hidden><span>Vibración</span><input id="haptics-enabled" type="checkbox" checked></label>
         <label class="setting-slider" for="sound-volume">Volumen de efectos<input id="sound-volume" type="range" min="0" max="1" step="0.05" value="0.7"></label>
         <label class="setting-slider" for="music-volume">Volumen de música<input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.15"></label>
         <details class="audio-previews"><summary>Escuchar sonidos</summary><p>Sonidos nuevos en prueba. La música es opcional.</p><div class="audio-buttons"><button type="button" data-cue="button">Botón</button><button type="button" data-cue="place">Colocar</button><button type="button" data-cue="move">Desplazar</button><button type="button" data-cue="line">Completar línea</button><button type="button" id="music-play">Escuchar música</button><button type="button" id="music-stop">Parar música</button></div><p id="audio-status" role="status">Listo para escuchar.</p></details>

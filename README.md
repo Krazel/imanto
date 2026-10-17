@@ -2,7 +2,7 @@
 
 A warm color puzzle by Krazel Games. English and Spanish. Complete monochrome rows or columns; place one tile to push its orthogonal neighbors once.
 
-Native iOS beta 0.13 (1), iPhone/iPad, iOS 16+. Offline WKWebView runtime; recorded music and effects use AVAudioPlayer and playback session. No accounts, ads, analytics or purchases.
+Native iOS beta 0.14 (1), iPhone/iPad, iOS 16+. Offline WKWebView runtime; recorded music and effects use AVAudioPlayer and playback session. Optional UIKit haptics for placement, lines, combos and all-clear, with a separate saved toggle on supported iPhones. No accounts, ads, analytics or purchases.
 
 ## Build
 
@@ -15,4 +15,4 @@ Game code/art: copyright Krazel Studio. Public source visibility does not grant 
 Support: https://krazel.github.io/imanto/support/
 Privacy: https://krazel.github.io/imanto/privacy/
 
-TestFlight beta only. App Store and itch.io listings remain drafts. Physical-device audio, silent-switch and text-gesture QA is pending user testing.
+TestFlight beta only. App Store and itch.io listings remain drafts. Physical-device haptics, audio, silent-switch and text-gesture QA is pending user testing.

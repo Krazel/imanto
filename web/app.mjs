@@ -7,6 +7,7 @@ import {createCelebration} from './celebration.mjs';
 import {checkLines,applyLineCheck} from './line-search.mjs';
 import {t,initializeLanguage} from './i18n.mjs';
 import {createAudio} from './audio.mjs';
+import {createHaptics} from './haptics.mjs';
 const $=s=>document.querySelector(s);
 const boardEl=$('#board'),cellsEl=$('#cells'),piecesEl=$('#pieces'),previewEl=$('#preview');
 const trayEl=$('#tray'),status=$('#status'),menu=$('#menu'),help=$('#instructions');
@@ -28,6 +29,7 @@ let demoKind=Object.hasOwn(DEMOS,effectParam)?effectParam:'double',demoSpeed=1,d
 const effectRoom=IS_EFFECTS?createEffectsRoom({onPlay:playDemo,onPrepare:()=>prepareDemo(),onSpeed:setEffectSpeed}):null;
 const celebration=createCelebration(boardEl,document.querySelector('.game'));
 const audio=createAudio();
+const haptics=createHaptics();
 const lab=IS_LAB?createLaboratory({onChange:setPhysics,onScene:loadScene,onEdit:toggleEditing,onApply:applyExperiment}):null;
 let physics=lab?.getSettings()||normalizePhysics(VARIANT||BASIC_PHYSICS);
 if(lab) {
@@ -151,7 +153,7 @@ async function animate(result,oldScore,playedId=null,initialBoard=null,lineCheck
     if(frame.kind==='clear'){
       const ids=new Set(frame.cleared.map(i=>frame.board[i].id));
       const winning=[...piecesEl.children].filter(el=>ids.has(Number(el.dataset.id)));
-      activeCelebration=celebration.start(frame,winning);audio.play('line');
+      activeCelebration=celebration.start(frame,winning);audio.play('line');haptics.clear(frame);
       shown+=frame.gain;$('#score').textContent=shown;$('#bonus').textContent=`+${frame.gain}`;$('#bonus').classList.add('show');
       status.textContent=activeCelebration.title;await delay(activeCelebration.charge);
       winning.forEach(el=>el.classList.add('clear'));await delay(320);
@@ -174,12 +176,12 @@ async function place(at){
   if(editing){const brush=lab.getBrush();draft.board[at]=brush.color==='empty'?null:{id:draft.nextId++,color:brush.color};draft.over=false;draft.endReason=null;triggerId=draft.board[at]?.id||null;experiment=structuredClone(draft);renderBoard(draft.board);lab.showStats(draft.board,0,true);return;}
   if(state.over||state.board[at])return;
   experiment=null;const oldScore=state.score,playedId=state.tray[selected].id,result=playTurn(state,at,selected,IS_EFFECTS&&demoKind==='escape'?()=>.5:Math.random,physics);
-  state=result.state;audio.play('place');if(IS_MAIN)finishGuidance();const lineCheck=IS_LAB?null:checkLines(state,physics);
+  state=result.state;audio.play('place');if(result.frames[0]?.kind!=='clear')haptics.play('place');if(IS_MAIN)finishGuidance();const lineCheck=IS_LAB?null:checkLines(state,physics);
   if(!state.tray[selected]||result.newRound)selected=state.tray.findIndex(Boolean);await animate(result,oldScore,playedId,null,lineCheck);
 }
 for(let at=0;at<25;at++){
   const cell=cells[at];cell.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch')preview(at);});cell.addEventListener('focus',()=>preview(at));
-  cell.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;e.preventDefault();pressAt=at;ignoreClickUntil=Date.now()+600;preview(at);});
+  cell.addEventListener('pointerdown',e=>{if(!cell.disabled&&!busy&&!editing)haptics.prepare();if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;e.preventDefault();pressAt=at;ignoreClickUntil=Date.now()+600;preview(at);});
   cell.addEventListener('click',()=>{if(Date.now()>ignoreClickUntil)place(at);});
   cell.addEventListener('keydown',e=>{const d={ArrowRight:1,ArrowLeft:-1,ArrowUp:-5,ArrowDown:5}[e.key];if(!d)return;e.preventDefault();for(let n=at+d;n>=0&&n<25;n+=d)if(!cells[n].disabled){cells[n].focus();break;}});
 }

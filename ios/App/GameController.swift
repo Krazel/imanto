@@ -17,14 +17,18 @@ final class GameController: UIViewController, WKNavigationDelegate {
     private(set) var navigationError: String?
     private(set) var scriptErrors: [String] = []
     let audio = NativeAudio()
+    var haptics: NativeHaptics!
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 1, green: 0.969, blue: 0.922, alpha: 1)
+        haptics = NativeHaptics(view: view)
         let configuration = WKWebViewConfiguration()
         configuration.preferences.isTextInteractionEnabled = true
         let handler = WeakHandler(self)
         configuration.userContentController.add(handler, name: "imantoAudio")
         configuration.userContentController.add(handler, name: "imantoText")
+        configuration.userContentController.add(handler, name: "imantoHaptics")
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.imantoCapabilities={haptics:\(haptics.supported ? "true" : "false")};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         #if DEBUG
         configuration.userContentController.add(handler, name: "imantoDiagnostics")
         configuration.userContentController.addUserScript(WKUserScript(source: "addEventListener('error',e=>window.webkit.messageHandlers.imantoDiagnostics.postMessage(String(e.message)));", injectionTime: .atDocumentStart, forMainFrameOnly: true))
@@ -65,17 +69,19 @@ final class GameController: UIViewController, WKNavigationDelegate {
             if web.configuration.preferences.isTextInteractionEnabled != enabled { web.configuration.preferences.isTextInteractionEnabled = enabled }
         } else if message.name == "imantoAudio", let body = message.body as? [String: Any] {
             audio.receive(body)
+        } else if message.name == "imantoHaptics", let body = message.body as? [String: Any] {
+            haptics.receive(body)
         }
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
-    @objc private func suspend() { audio.active = false; audio.pause() }
-    @objc private func resume() { audio.active = true; audio.reconcile() }
+    @objc private func suspend() { haptics.active = false; audio.active = false; audio.pause() }
+    @objc private func resume() { haptics.active = true; audio.active = true; audio.reconcile() }
     @objc private func interrupted(_ notification: Notification) {
         guard let number = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: number) else { return }
-        if type == .began { suspend() }
+        if type == .began { audio.active = false; audio.pause() }
         else {
             let options = (notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt) ?? 0
             audio.active = UIApplication.shared.applicationState == .active
