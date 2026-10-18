@@ -93,14 +93,14 @@ final class GameController: UIViewController, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     @objc private func suspend() { haptics.active = false; audio.active = false; audio.pause() }
-    @objc private func resume() { haptics.active = true; audio.active = true; audio.reconcile(); Task { await subscriptions.refresh() } }
+    @objc private func resume() { haptics.active = !ads.fullscreenPresenting; audio.active = !ads.fullscreenPresenting; audio.reconcile(); Task { await subscriptions.refresh() } }
     @objc private func interrupted(_ notification: Notification) {
         guard let number = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: number) else { return }
         if type == .began { audio.active = false; audio.pause() }
         else {
             let options = (notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt) ?? 0
-            audio.active = UIApplication.shared.applicationState == .active
+            audio.active = UIApplication.shared.applicationState == .active && !ads.fullscreenPresenting
             if AVAudioSession.InterruptionOptions(rawValue: options).contains(.shouldResume) { audio.reconcile() }
         }
     }

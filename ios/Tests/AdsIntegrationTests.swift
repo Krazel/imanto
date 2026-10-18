@@ -8,6 +8,7 @@ import WebKit
     weak var owner: GameController?
     var banner: UIView?
     var presentations: [String] = []
+    var audioPaused: [Bool] = []
     init(_ owner: GameController) { self.owner = owner }
     func ready(_ kind: String, completion: @escaping (Bool) -> Void) { completion(true) }
     func available(_ kind: String) -> Bool { true }
@@ -32,6 +33,7 @@ import WebKit
         presentations.append(kind)
         owner.present(page, animated: false) {
             onShown()
+            self.audioPaused.append(!owner.audio.active && owner.ads.fullscreenPresenting)
             if kind == "rewarded" { onEarned() }
             page.dismiss(animated: false) { completion(true, kind == "rewarded") }
         }
@@ -89,7 +91,10 @@ import WebKit
             XCTAssertEqual(results.last?["shown"] as? Bool, true)
             XCTAssertEqual(results.last?["earned"] as? Bool, kind == "rewarded")
             XCTAssertNil(owner.presentedViewController)
+            XCTAssertFalse(owner.ads.fullscreenPresenting)
+            XCTAssertTrue(owner.audio.active)
         }
         XCTAssertEqual(fixture.presentations, ["interstitial", "rewarded"])
+        XCTAssertEqual(fixture.audioPaused, [true, true])
     }
 }

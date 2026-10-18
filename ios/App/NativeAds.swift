@@ -34,12 +34,19 @@ extension NativeAdProviding { func updateLayout() {} }
 @MainActor final class NativeAds {
     weak var owner: GameController?
     let config = AdConfiguration()
+    private(set) var fullscreenPresenting = false
     var provider: NativeAdProviding?
     init(owner: GameController) {
         self.owner = owner
         #if canImport(GoogleMobileAds) && canImport(UserMessagingPlatform)
         provider = GoogleAdProvider(owner: owner)
         #endif
+    }
+    private func setFullscreen(_ visible: Bool) {
+        fullscreenPresenting = visible
+        let active = UIApplication.shared.applicationState == .active && !visible
+        owner?.haptics.active = active; owner?.audio.active = active
+        if visible { owner?.audio.pause() } else { owner?.audio.reconcile() }
     }
     func updateLayout() { provider?.updateLayout() }
     func hideBanner() { provider?.setBanner(false, completion: { _ in }); owner?.reserveBannerHeight(0) }
@@ -60,10 +67,11 @@ extension NativeAdProviding { func updateLayout() {} }
         guard config.enabled(kind), UIApplication.shared.applicationState == .active, let provider = provider else {
             reply(["ready": false, "shown": false, "earned": false]); return
         }
+        if action == "show", fullscreenPresenting { reply(["shown": false, "earned": false]); return }
         switch action {
         case "ready": provider.ready(kind, completion: { reply(["ready": $0]) })
         case "available": reply(["ready": provider.available(kind)])
-        case "show": provider.show(kind, onShown: { reply(["phase": "shown", "shown": true]) }, onEarned: { reply(["phase": "earned", "shown": true, "earned": true]) }, completion: { shown, earned in reply(["shown": shown, "earned": earned]) })
+        case "show": provider.show(kind, onShown: { [weak self] in self?.setFullscreen(true); reply(["phase": "shown", "shown": true]) }, onEarned: { reply(["phase": "earned", "shown": true, "earned": true]) }, completion: { [weak self] shown, earned in self?.setFullscreen(false); reply(["shown": shown, "earned": earned]) })
         case "banner": provider.setBanner(body["visible"] as? Bool == true, completion: { reply(["shown": $0]) })
         case "privacy": provider.privacy { reply(["complete": $0]) }
         default: reply(["ready": false, "shown": false, "earned": false])
