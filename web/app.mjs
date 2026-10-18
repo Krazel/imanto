@@ -8,6 +8,9 @@ import {checkLines,applyLineCheck} from './line-search.mjs';
 import {t,initializeLanguage} from './i18n.mjs';
 import {createAudio} from './audio.mjs';
 import {createHaptics} from './haptics.mjs';
+import {readCombo} from './combo.mjs';
+import {createPersonalBest} from './personal-best.mjs';
+import {installTrayDrag} from './drag.mjs';
 const $=s=>document.querySelector(s);
 const boardEl=$('#board'),cellsEl=$('#cells'),piecesEl=$('#pieces'),previewEl=$('#preview');
 const trayEl=$('#tray'),status=$('#status'),menu=$('#menu'),help=$('#instructions');
@@ -15,6 +18,7 @@ const restartConfirm=$('#restart-confirm');
 const effectParam=new URLSearchParams(location.search).get('effects');
 const IS_EFFECTS=effectParam!==null;
 const IS_CAPTURE=IS_EFFECTS&&new URLSearchParams(location.search).get('capture')==='1';
+const IS_PRESENTATION=IS_EFFECTS&&new URLSearchParams(location.search).get('presentation')==='1';
 const IS_LAB=!IS_EFFECTS&&new URLSearchParams(location.search).get('lab')==='1';
 const variantId=new URLSearchParams(location.search).get('variant');
 const VARIANT=!IS_LAB&&!IS_EFFECTS&&variantId!=='no-turn'&&Object.hasOwn(VARIANTS,variantId)?VARIANTS[variantId]:null;
@@ -60,6 +64,7 @@ if(VARIANT){
 }
 $('#mode-back').hidden=!(IS_LAB||IS_EFFECTS||VARIANT);
 if(IS_CAPTURE){document.body.classList.add('is-capture');$('.heading h1').textContent='IMANTO';document.title='Imanto · Gameplay capture';for(const id of ['#quick-speed','#effect-speed']){const option=document.createElement('option');option.value='12';option.textContent='Capture (slow)';$(id).append(option);}}
+if(IS_PRESENTATION){document.body.classList.remove('is-lab');document.body.classList.add('is-presentation');$('.heading h1').textContent='IMANTO';}
 
 if(IS_LAB||IS_EFFECTS){
   $('#quick-controls').hidden=false;
@@ -86,6 +91,7 @@ for(const link of document.querySelectorAll('.variant-links a')){
 }
 function readSave(key){try{return JSON.parse(localStorage.getItem(key));}catch{return null;}}
 const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
+const personalBest=createPersonalBest(storage);
 if(IS_EFFECTS)state=effectParam==='1'?restoreGame(readSave(SAVE))||effectScene(demoKind).state:effectScene(demoKind).state;
 else if(VARIANT)state=loadComparison(variantId,storage);
 else if(IS_LAB)state=restoreGame(readSave(SAVE));
@@ -101,7 +107,25 @@ function finishGuidance(){guidanceSeen=true;if(IS_MAIN)try{localStorage.setItem(
 function idleMessage(){return IS_MAIN?(guidanceSeen?'':t('Elige una ficha y toca un hueco.')):t('Elige un color y toca un hueco.');}
 selected=state.tray.findIndex(Boolean);
 const cells=Array.from({length:25},(_,i)=>{const b=document.createElement('button');b.className='cell';b.dataset.at=i;cellsEl.append(b);return b;});
-function persist(){try{localStorage.setItem(SAVE,JSON.stringify(state));}catch{}}
+function persist(){try{localStorage.setItem(SAVE,JSON.stringify(state));}catch{}if(IS_MAIN)personalBest.update(state.score);renderBest();}
+function renderBest(){const best=personalBest.get();$('#best-score').textContent=best;$('#personal-best').setAttribute('aria-label',t('Récord personal: {n}',{n:best}));}
+function renderCombo(){
+  const combo=readCombo(state.combo,state.round),badge=$('#combo-badge');badge.hidden=!combo.count;
+  if(!combo.count)return;
+  $('#combo-label').textContent=`COMBO ×${combo.count}`;
+  const hands=combo.lastRound===state.round?2:1;
+  badge.dataset.hands=hands;badge.setAttribute('aria-label',t(hands===2?'Combo ×{n}. Esta tanda y la siguiente.':'Combo ×{n}. Última tanda para continuar.',{n:combo.count}));
+}
+let scoreFrame=0;
+function showScore(value,animate=false){
+  cancelAnimationFrame(scoreFrame);const el=$('#score'),from=Number(el.textContent)||0;
+  el.setAttribute('aria-label',t('Puntuación: {n}',{n:value}));
+  el.dataset.wide=String(value).length>6;
+  if(!animate||reduce.matches){el.textContent=value;return;}
+  const begin=performance.now();
+  const tick=now=>{const progress=Math.min(1,(now-begin)/280);el.textContent=Math.round(from+(value-from)*(1-(1-progress)**3));if(progress<1)scoreFrame=requestAnimationFrame(tick);};
+  scoreFrame=requestAnimationFrame(tick);el.classList.remove('score-reward');void el.offsetWidth;el.classList.add('score-reward');
+}
 function position(el,at){el.style.setProperty('--row',Math.floor(at/5));el.style.setProperty('--col',at%5);}
 function tile(p,at,extra=''){const el=document.createElement('div');el.className=`tile ${p.color} ${extra}`;el.textContent='';el.dataset.id=p.id;position(el,at);return el;}
 function renderBoard(board) {
@@ -123,15 +147,13 @@ function renderBoard(board) {
 function renderTray(){
   trayEl.replaceChildren();
   state.tray.forEach((p,i)=>{
-    const button=document.createElement('button');button.className='choice';
+    const button=document.createElement('button');button.className='choice';button.dataset.option=i;
     if(!p){button.classList.add('used');button.disabled=true;button.setAttribute('aria-label',t('Opción {n}: ya colocada',{n:i+1}));const mark=document.createElement('span');mark.className='chip';mark.textContent='✓';mark.setAttribute('aria-hidden','true');button.append(mark);trayEl.append(button);return;}
     button.setAttribute('aria-label',t('Opción {n}: {color}',{n:i+1,color:spoken(p)}));button.setAttribute('aria-pressed',String(selected===i));button.disabled=busy||editing||state.over;
-    const chip=document.createElement('span');chip.className=`chip ${p.color}`;chip.textContent='';chip.setAttribute('aria-hidden','true');button.append(chip);
-    button.addEventListener('click',()=>{selected=i;renderTray();clearPreview();status.textContent=IS_MAIN?idleMessage():t('{color}: toca un hueco',{color:spoken(p)});});trayEl.append(button);
+    const chip=document.createElement('span');chip.className=`chip ${p.color}`;chip.dataset.color=p.color;chip.textContent='';chip.setAttribute('aria-hidden','true');button.append(chip);
+    button.addEventListener('click',()=>{if(trayDrag.suppressClick())return;selected=i;renderTray();clearPreview();status.textContent=IS_MAIN?idleMessage():t('{color}: toca un hueco',{color:spoken(p)});});trayEl.append(button);
   });
-  const remaining=state.tray.filter(Boolean).length;
-  $('#round').textContent=t('RONDA {n}',{n:state.round});$('#remaining').textContent=remaining===1?t('1 ficha disponible'):t('{n} fichas disponibles',{n:remaining});
-  $('#pause-label').textContent=state.over?t('Resultado'):t('Pausa');$('#pause').setAttribute('aria-label',state.over?t('Ver resultado'):t('Pausar partida'));
+  renderCombo();$('#pause').setAttribute('aria-label',state.over?t('Ver resultado'):t('Pausar partida'));
   $('#next-hand').replaceChildren();for(const p of state.nextTray){const chip=document.createElement('span');chip.className=`forecast-chip ${p.color}`;chip.textContent='';chip.setAttribute('role','img');chip.setAttribute('aria-label',spoken(p));$('#next-hand').append(chip);}
 }
 function clearPreview(){previewAt=null;previewEl.replaceChildren();cells.forEach(c=>c.classList.remove('will-clear'));}
@@ -154,7 +176,8 @@ async function animate(result,oldScore,playedId=null,initialBoard=null,lineCheck
       const ids=new Set(frame.cleared.map(i=>frame.board[i].id));
       const winning=[...piecesEl.children].filter(el=>ids.has(Number(el.dataset.id)));
       activeCelebration=celebration.start(frame,winning);audio.play('line');haptics.clear(frame);
-      shown+=frame.gain;$('#score').textContent=shown;$('#bonus').textContent=`+${frame.gain}`;$('#bonus').classList.add('show');
+      shown+=frame.gain;showScore(shown,true);$('#bonus').textContent=`+${frame.gain}`;$('#bonus').classList.add('show');
+      const badge=$('#combo-badge');badge.classList.remove('combo-reward');void badge.offsetWidth;badge.classList.add('combo-reward');
       status.textContent=activeCelebration.title;await delay(activeCelebration.charge);
       winning.forEach(el=>el.classList.add('clear'));await delay(320);
     }else{
@@ -164,7 +187,7 @@ async function animate(result,oldScore,playedId=null,initialBoard=null,lineCheck
     }
   }
   if(lineCheck){status.textContent=t('Comprobando líneas posibles…');state=applyLineCheck(state,await lineCheck);persist();}
-  busy=false;renderBoard(state.board);renderTray();$('#score').textContent=state.score;$('#pause').disabled=false;lab?.setBusy(false);effectRoom?.setBusy(false);setQuickBusy(false);celebration.finish();boardEl.setAttribute('aria-busy','false');
+  busy=false;renderBoard(state.board);renderTray();showScore(state.score);$('#pause').disabled=false;lab?.setBusy(false);effectRoom?.setBusy(false);setQuickBusy(false);celebration.finish();boardEl.setAttribute('aria-busy','false');
   const resultMessage=result.allClears?t('¡Tablero limpio! +{points} puntos',{points:result.total}):result.maxSimultaneous>1?t('¡Combo de {n} líneas! +{points} puntos',{n:result.maxSimultaneous,points:result.total}):result.total?t('+{points} puntos · {n} línea',{points:result.total,n:result.lineCount}):result.physicsMoves?t(result.physicsMoves===1?'Expulsión · {n} movimiento':'Expulsión · {n} movimientos',{n:result.physicsMoves}):t('Completa cinco del mismo color');
   status.textContent=IS_MAIN&&!result.total?idleMessage():resultMessage;
   if(IS_MAIN&&result.total)statusTimer=setTimeout(()=>{if(!busy&&!state.over)status.textContent=idleMessage();},2400);
@@ -176,9 +199,15 @@ async function place(at){
   if(editing){const brush=lab.getBrush();draft.board[at]=brush.color==='empty'?null:{id:draft.nextId++,color:brush.color};draft.over=false;draft.endReason=null;triggerId=draft.board[at]?.id||null;experiment=structuredClone(draft);renderBoard(draft.board);lab.showStats(draft.board,0,true);return;}
   if(state.over||state.board[at])return;
   experiment=null;const oldScore=state.score,playedId=state.tray[selected].id,result=playTurn(state,at,selected,IS_EFFECTS&&demoKind==='escape'?()=>.5:Math.random,physics);
-  state=result.state;audio.play('place');if(result.frames[0]?.kind!=='clear')haptics.play('place');if(IS_MAIN)finishGuidance();const lineCheck=IS_LAB?null:checkLines(state,physics);
+  state=result.state;audio.play('place');if(result.frames.find(f=>f.kind!=='place')?.kind!=='clear')haptics.play('place');if(IS_MAIN)finishGuidance();const lineCheck=IS_LAB?null:checkLines(state,physics);
   if(!state.tray[selected]||result.newRound)selected=state.tray.findIndex(Boolean);await animate(result,oldScore,playedId,null,lineCheck);
 }
+const trayDrag=installTrayDrag({tray:trayEl,board:boardEl,
+  canStart:option=>!busy&&!editing&&!state.over&&!menu.open&&!help.open&&!restartConfirm.open&&!!state.tray[option],
+  onSelect:option=>{selected=option;clearPreview();haptics.prepare();for(const button of trayEl.children)button.setAttribute('aria-pressed',String(Number(button.dataset.option)===option));},
+  onHover:at=>{clearPreview();if(at!==null){preview(at);haptics.prepare();}},
+  onFinish:()=>renderTray(),onDrop:(at,option)=>{selected=option;place(at);}
+});
 for(let at=0;at<25;at++){
   const cell=cells[at];cell.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch')preview(at);});cell.addEventListener('focus',()=>preview(at));
   cell.addEventListener('pointerdown',e=>{if(!cell.disabled&&!busy&&!editing)haptics.prepare();if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;e.preventDefault();pressAt=at;ignoreClickUntil=Date.now()+600;preview(at);});
@@ -188,15 +217,15 @@ for(let at=0;at<25;at++){
 document.addEventListener('pointerup',e=>{if(pressAt===null)return;const at=pressAt;pressAt=null;const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');clearPreview();if(hit&&Number(hit.dataset.at)===at)place(at);});
 document.addEventListener('pointercancel',()=>{pressAt=null;clearPreview();});boardEl.addEventListener('pointerleave',()=>{if(pressAt===null)clearPreview();});
 function setPhysics(settings){physics=normalizePhysics(settings);clearPreview();status.textContent=t('Parámetros listos: pulsa Simular');}
-function loadScene(name){if(busy)return;const scene=laboratoryScene(name,state);draft=scene.state;triggerId=scene.triggerId;experiment=structuredClone(draft);editing=true;lab.setEditing(true);clearPreview();piecesEl.replaceChildren();renderBoard(draft.board);renderTray();lab.showStats(draft.board,0,true);$('#score').textContent=draft.score;status.textContent=t('Escena preparada: pulsa Simular');}
-function toggleEditing(){if(busy)return;editing=!editing;if(editing){draft=structuredClone(state);experiment=null;}else{draft=null;experiment=null;triggerId=null;$('#score').textContent=state.score;}lab.setEditing(editing);clearPreview();renderBoard(editing?draft.board:state.board);renderTray();lab.showStats(editing?draft.board:state.board,0,editing);status.textContent=editing?t('Toca casillas con el pincel; después, Simular'):t('Elige un color y toca un hueco.');}
+function loadScene(name){if(busy)return;const scene=laboratoryScene(name,state);draft=scene.state;triggerId=scene.triggerId;experiment=structuredClone(draft);editing=true;lab.setEditing(true);clearPreview();piecesEl.replaceChildren();renderBoard(draft.board);renderTray();lab.showStats(draft.board,0,true);showScore(draft.score);status.textContent=t('Escena preparada: pulsa Simular');}
+function toggleEditing(){if(busy)return;editing=!editing;if(editing){draft=structuredClone(state);experiment=null;}else{draft=null;experiment=null;triggerId=null;showScore(state.score);}lab.setEditing(editing);clearPreview();renderBoard(editing?draft.board:state.board);renderTray();lab.showStats(editing?draft.board:state.board,0,editing);status.textContent=editing?t('Toca casillas con el pincel; después, Simular'):t('Elige un color y toca un hueco.');}
 async function applyExperiment(){if(busy)return;const base=structuredClone(editing?draft:experiment||state);experiment=structuredClone(base);const result=resolveBoard(base.board,physics,{triggerId:triggerId??base.board.filter(Boolean).at(-1)?.id});editing=false;draft=null;lab.setEditing(false);state={...base,board:result.board,score:base.score+result.total,over:result.board.every(Boolean),endReason:result.board.every(Boolean)?'full':null};selected=state.tray.findIndex(Boolean);await animate(result,base.score,null,base.board);}
 function openMenu(over=state.over){
   clearPreview();const holes=state.board.filter(p=>!p).length;
   menu.dataset.mode=over?'over':'pause';
   $('#menu-title').textContent=over?t('Fin de la partida'):t('En pausa');
   $('#menu-copy').textContent=over?t('Ya no hay líneas posibles.'):t('Tu partida sigue aquí.');
-  $('#menu-score').textContent=state.score;$('#menu-round').textContent=over?t('{n} turnos',{n:state.turns}):t('Ronda {n}',{n:state.round});
+  $('#menu-score').textContent=state.score;$('#menu-best').textContent=personalBest.get();
   $('#menu-turns').textContent=over?t(holes===1?' · {n} hueco libre':' · {n} huecos libres',{n:holes}):'';
   $('#end-explanation').hidden=!over;$('#end-explanation').textContent=holes?t('Has terminado antes de llenar el tablero.'):t('El tablero está lleno y no quedan líneas.');
   $('#continue').hidden=over;$('#view-board').hidden=!over;$('#menu-close').hidden=over;
@@ -209,7 +238,7 @@ function restartGame(){
   if(restartConfirm.open)restartConfirm.close();
   if(IS_EFFECTS){menu.close();prepareDemo();return;}
   celebration.finish();state=VARIANT?loadComparison(variantId,storage,Math.random,{restart:true}):createGame(Math.random,physics);
-  clearTimeout(statusTimer);selected=0;editing=false;draft=null;experiment=null;triggerId=null;lab?.setEditing(false);persist();menu.close();clearPreview();piecesEl.replaceChildren();renderBoard(state.board);renderTray();$('#score').textContent=0;$('#bonus').classList.remove('show');lab?.showStats(state.board);status.textContent=idleMessage();
+  clearTimeout(statusTimer);selected=0;editing=false;draft=null;experiment=null;triggerId=null;lab?.setEditing(false);persist();menu.close();clearPreview();piecesEl.replaceChildren();renderBoard(state.board);renderTray();showScore(0);$('#bonus').classList.remove('show');lab?.showStats(state.board);status.textContent=idleMessage();
 }
 $('#new-game').addEventListener('click',()=>{if(!IS_EFFECTS&&!IS_LAB&&!VARIANT&&!state.over){menu.close();restartConfirm.showModal();return;}restartGame();});
 $('#restart-yes').addEventListener('click',restartGame);
@@ -217,7 +246,7 @@ $('#restart-no').addEventListener('click',()=>{restartConfirm.close();menu.close
 restartConfirm.addEventListener('cancel',()=>queueMicrotask(()=>openMenu(false)));
 const openHelp=()=>{clearPreview();help.showModal();};$('#menu-help').addEventListener('click',openHelp);$('#close-help').addEventListener('click',()=>help.close());
 $('#help-close-icon').addEventListener('click',()=>help.close());
-renderBoard(state.board);renderTray();$('#score').textContent=state.score;lab?.showStats(state.board);persist();
+renderBoard(state.board);renderTray();showScore(state.score);lab?.showStats(state.board);persist();
 if(migrated&&!IS_MAIN)status.textContent=t('Partida elegida conservada · sin desvíos');
 async function checkInitial(){
   busy=true;renderBoard(state.board);renderTray();$('#pause').disabled=true;effectRoom?.setBusy(true);setQuickBusy(true);boardEl.setAttribute('aria-busy','true');status.textContent=t('Comprobando líneas posibles…');
@@ -236,7 +265,7 @@ function prepareDemo(kind=demoKind){
   if(busy)return;demoKind=Object.hasOwn(DEMOS,kind)?kind:demoKind;
   const scene=effectScene(demoKind);state=scene.state;selected=scene.option;demoAt=scene.at;
   celebration.finish();clearPreview();clearTimeout(bonusTimer);$('#bonus').classList.remove('show');
-  piecesEl.replaceChildren();renderBoard(state.board);renderTray();$('#score').textContent=state.score;
+  piecesEl.replaceChildren();renderBoard(state.board);renderTray();showScore(state.score);
   effectRoom.setKind(demoKind);status.textContent=demoKind==='dead'?t('Coloca miel en fila 2, columna 2, o reproduce'):demoKind==='escape'?t('Tu tablero preparado · reproduce las siete jugadas'):t('Prueba preparada · coloca en el centro o reproduce');persist();
   document.querySelector('.game').scrollIntoView({behavior:'auto',block:'start'});
   return scene;

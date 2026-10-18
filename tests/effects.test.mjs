@@ -40,8 +40,8 @@ test('celebration labels and timing distinguish normal line, double, triple and 
   const double=celebrationFor({lineCount:2,gain:200,allClear:false});
   const triple=celebrationFor({lineCount:3,gain:450,allClear:false});
   const all=celebrationFor({lineCount:2,gain:200,allClear:true});
-  assert.equal(single.kind,'line');assert.equal(double.title,'¡Combo doble!');
-  assert.equal(triple.title,'¡Combo triple!');assert.equal(all.title,'¡Tablero limpio!');
+  assert.equal(single.kind,'line');assert.equal(double.title,'¡Doble línea!');
+  assert.equal(triple.title,'¡Triple línea!');assert.equal(all.title,'¡Tablero limpio!');
   assert.ok(all.charge>double.charge);assert.ok(all.linger>single.linger);
 });
 test('promoting no-turn copies its exact progress and leaves both historical saves intact',()=>{

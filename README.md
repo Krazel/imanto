@@ -2,7 +2,7 @@
 
 A warm color puzzle by Krazel Games. English and Spanish. Complete monochrome rows or columns; place one tile to push its orthogonal neighbors once.
 
-Native iOS beta 0.14 (1), iPhone/iPad, iOS 16+. Offline WKWebView runtime; recorded music and effects use AVAudioPlayer and playback session. Optional UIKit haptics for placement, lines, combos and all-clear, with a separate saved toggle on supported iPhones. No accounts, ads, analytics or purchases.
+Native iOS beta 0.15 (1), iPhone/iPad, iOS 16+. Offline WKWebView runtime; recorded music and effects use AVAudioPlayer and playback session. Drag or tap to place tiles. Consecutive scoring moves grow a combo multiplier, renewed through the current and following hand. The HUD shows score, personal best and combo. Optional UIKit haptics for placement, lines, combos and all-clear, with a separate saved toggle on supported iPhones. No accounts, ads, analytics or purchases.
 
 ## Build
 

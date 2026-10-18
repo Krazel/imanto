@@ -1,7 +1,7 @@
 // iOS uses UIKit feedback generators; unsupported browsers/devices stay silent.
 export function clearHaptic(frame){
   if(!(frame?.lineCount>0))return null;
-  return frame.allClear?'allClear':frame.lineCount>1?'combo':'line';
+  return frame.allClear?'allClear':frame.lineCount>1||frame.multiplier>1?'combo':'line';
 }
 export function createHaptics(scope=globalThis){
   const doc=scope.document,handler=scope.webkit?.messageHandlers?.imantoHaptics;

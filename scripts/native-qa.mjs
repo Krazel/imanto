@@ -12,11 +12,15 @@ for(const kind of ['iPhone','iPad']){
  try{output=run('xcodebuild',['test','-project','ios/Imanto.xcodeproj','-scheme','Imanto','-destination',`platform=iOS Simulator,arch=arm64,id=${d.udid}`,'-parallel-testing-enabled','NO','-maximum-concurrent-test-simulator-destinations','1','-derivedDataPath','artifacts/DerivedData','-resultBundlePath',`artifacts/qa/${kind}.xcresult`,'CODE_SIGNING_ALLOWED=NO']);}
  catch(error){spawnSync('xcrun',['xcresulttool','get','test-results','summary','--path',`artifacts/qa/${kind}.xcresult`],{stdio:'inherit'});spawnSync('xcrun',['simctl','io',d.udid,'screenshot',`artifacts/qa/${kind}-failure.png`],{stdio:'inherit'});throw error;}
  fs.writeFileSync(`artifacts/qa/${kind}-tests.log`,output);
+ const container=run('xcrun',['simctl','get_app_container',d.udid,'com.krazel.imanto','data']).trim();
+ const snapshot=container+'/Documents/imanto-native-qa.png';
+ if(!fs.existsSync(snapshot))throw Error('Missing verified in-game WKWebView snapshot');
+ fs.copyFileSync(snapshot,`artifacts/qa/${kind}.png`);
  const app='artifacts/DerivedData/Build/Products/Debug-iphonesimulator/Imanto.app';
  run('xcrun',['simctl','install',d.udid,app]);
  run('xcrun',['simctl','launch',d.udid,'com.krazel.imanto']);
  await new Promise(r=>setTimeout(r,2000));
- run('xcrun',['simctl','io',d.udid,'screenshot',`artifacts/qa/${kind}.png`]);
+ run('xcrun',['simctl','io',d.udid,'screenshot',`artifacts/qa/${kind}-relaunch.png`]);
  console.log(kind+' simulator: production offline runtime, placement, menu and native audio tests passed');
  run('xcrun',['simctl','shutdown',d.udid]);
 }

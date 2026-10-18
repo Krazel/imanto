@@ -15,14 +15,14 @@
 <body>
   <main class="game" aria-label="Imanto">
     <a id="mode-back" class="back-link" href="/" hidden>‹ Volver al juego</a>
-    <header class="heading"><h1>IMANTO</h1><button id="pause" class="pause-button" aria-label="Pausar partida"><svg viewBox="0 0 18 20" aria-hidden="true"><rect x="3" y="3" width="4" height="14" rx="1.5"/><rect x="11" y="3" width="4" height="14" rx="1.5"/></svg><span id="pause-label">Pausa</span></button></header>
+    <header class="heading"><h1>IMANTO</h1><button id="pause" class="pause-button" aria-label="Pausar partida"><svg viewBox="0 0 18 20" aria-hidden="true"><rect x="3" y="3" width="4" height="14" rx="1.5"/><rect x="11" y="3" width="4" height="14" rx="1.5"/></svg></button></header>
     <p id="variant-name" class="variant-name" hidden></p>
     <section id="quick-controls" class="quick-controls" aria-label="Acciones de prueba" hidden>
       <button id="quick-primary" class="primary">Repetir animación</button>
       <button id="quick-secondary" class="secondary">Preparar</button>
       <label id="quick-speed-label">Velocidad<select id="quick-speed" aria-label="Velocidad de la animación"><option value="1">Normal</option><option value="2.5">Lenta</option></select></label>
     </section>
-    <section class="score-bar" aria-label="Puntuación"><strong id="score">0</strong><span>PUNTOS</span><div class="round-info"><span id="round">RONDA 1</span><small id="remaining">3 fichas disponibles</small></div><b id="bonus" aria-hidden="true"></b></section>
+    <section class="score-bar" aria-label="Puntuación"><strong id="score">0</strong><div class="score-extras"><div id="personal-best" class="personal-best" aria-label="Récord personal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v5c0 4-2 6-5 6S7 12 7 8V3Zm0 2H3v3c0 3 2 5 5 5M17 5h4v3c0 3-2 5-5 5M12 14v5m-4 2h8m-9-2h10"/></svg><span id="best-score">0</span></div><div id="combo-badge" class="combo-badge" hidden><strong id="combo-label">COMBO ×1</strong><span class="combo-window" aria-hidden="true"><i></i><i></i></span></div></div><b id="bonus" aria-hidden="true"></b></section>
     <div id="board" class="board" aria-label="Tablero de cinco por cinco" aria-busy="false">
       <div id="cells" class="cells"></div><div id="pieces" class="pieces" aria-hidden="true"></div><div id="preview" class="preview" aria-hidden="true"></div>
     </div>
@@ -40,7 +40,7 @@
     <div class="dialog-content">
       <button id="menu-close" class="icon-button close-button" aria-label="Cerrar pausa">×</button>
       <p class="eyebrow">IMANTO</p><h2 id="menu-title">En pausa</h2><p id="menu-copy">Tu partida sigue aquí.</p>
-      <div id="menu-stats" class="menu-stats"><div><strong id="menu-score">0</strong><span>puntos</span></div><div><strong id="menu-round">Ronda 1</strong><span id="menu-turns"></span></div></div>
+      <div id="menu-stats" class="menu-stats"><div><strong id="menu-score">0</strong><span>puntos</span></div><div><strong id="menu-best">0</strong><span>Récord personal</span><span id="menu-turns"></span></div></div>
       <p id="end-explanation" class="end-explanation" hidden></p>
       <button id="continue" class="primary">Seguir jugando</button><button id="new-game" class="secondary">Nueva partida</button><button id="view-board" class="secondary outline" hidden>Ver tablero</button><button id="menu-help" class="text-button">Cómo jugar</button>
       <details class="settings-panel"><summary>Ajustes</summary>
@@ -68,6 +68,8 @@
       <p id="movement-rule" class="rule-note">Si hay una fila bloqueando, solo se mueve la última con hueco. Sin desvíos.</p>
       <div class="reward-strip" aria-label="Puntos por líneas simultáneas"><div>1 línea<strong>50</strong></div><div>2 líneas<strong>200</strong></div><div>3 líneas<strong>450</strong></div></div>
       <p class="help-ending">La partida termina cuando ya no puedes formar líneas, aunque queden huecos.</p>
+      <p class="combo-help">Cada jugada con líneas aumenta tu combo: ×2, ×3… y multiplica los puntos. Puedes continuar en esta tanda o en la siguiente; cada acierto renueva el margen.</p>
+      <p class="drag-help">Toca una ficha y un hueco, o arrástrala desde la tanda hasta el tablero.</p>
       <button id="close-help" class="primary">Entendido</button>
     </div>
   </dialog>

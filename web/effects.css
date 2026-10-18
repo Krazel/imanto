@@ -19,6 +19,13 @@
 .celebrating-all .cell{animation:cell-aura calc(1450ms * var(--fx-speed,1)) ease-out both}
 .game.celebrating-all::before{content:"";position:absolute;inset:0;border-radius:24px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 50% 45%,#ffe7aa99,#c7f4e944 55%,transparent 85%);animation:game-aura calc(1450ms * var(--fx-speed,1)) ease-out both}
 .game.celebrating-all .score-bar strong{color:#217a80}
+.board.celebrating-line,.board.celebrating-combo{animation:line-aura .8s ease-out both}
+.win-glint{position:absolute;left:var(--origin-x);top:var(--origin-y);width:11px;height:11px;background:#fff8da;box-shadow:0 0 12px #ffd36c;clip-path:polygon(50% 0,63% 36%,100% 50%,63% 63%,50% 100%,36% 63%,0 50%,36% 36%);opacity:0;animation:win-spark calc(700ms * var(--fx-speed,1)) ease-out calc((var(--fx-charge,340ms) + var(--spark-delay,0ms)) * var(--fx-speed,1)) both}
+.celebrating-combo .win-glint{background:#fffbd5}.celebrating-combo .win-beam{box-shadow:0 0 24px #64d9ca}
+.combo-help,.drag-help{font-size:12px!important;color:var(--muted);padding:12px;background:#f5e8d5;border-radius:14px}
+@keyframes line-aura{0%,100%{box-shadow:0 0 0 #fbd36c00}45%{box-shadow:0 0 22px #fbd36c88,0 0 42px #eeb13722}}
+@keyframes score-reward{0%,100%{transform:scale(1)}35%{transform:scale(1.07);color:#24858b;text-shadow:0 0 16px #edb13755}}
+@keyframes combo-reward{0%,100%{transform:scale(1)}35%{transform:scale(1.12);box-shadow:0 0 22px #edb13799,inset 0 0 10px #fff}}
 @keyframes winning-charge{0%{filter:brightness(1);transform:scale(1)}50%{background:#ffd16c;filter:brightness(1.06)}100%{background:#fff2b5;box-shadow:0 0 var(--win-glow) #ffe18a,inset 0 0 0 2px #fff9;transform:scale(1.03)}}
 @keyframes winning-burst{0%{background:#fff2b5;transform:scale(1.03);opacity:1}40%{background:#fffce0;transform:scale(1.05)}100%{background:#ffe4a5;transform:scale(.2);opacity:0}}
 @keyframes celebration-in{from{opacity:0;transform:translate(-50%,5px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
@@ -30,3 +37,4 @@
 @keyframes cell-aura{0%,100%{background:var(--slot)}40%,65%{background:#fff8d5;box-shadow:inset 0 0 15px #ffe59b}}
 @keyframes game-aura{0%,100%{opacity:0}35%,65%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.win-ring,.win-spark,.win-beam{display:none}.celebration-card,.tile.winning,.tile.winning.clear,.board.celebrating-all,.celebrating-all .cell,.game.celebrating-all::before{animation:none}.tile.winning{background:#fff2b5}.celebration-card{opacity:1}}
+@media(prefers-reduced-motion:reduce){.win-glint{display:none}.score-reward,.combo-reward,.board.celebrating-line,.board.celebrating-combo{animation:none}.drag-chip{transform:translate(-50%,-50%)}}

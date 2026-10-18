@@ -1,4 +1,5 @@
 import {BASIC_PHYSICS,normalizePhysics,repelOnce,contactPairs} from './physics.mjs';
+import {readCombo,scoreCombo} from './combo.mjs';
 export {BASIC_PHYSICS,LAB_PHYSICS,normalizePhysics,repelOnce,contactPairs} from './physics.mjs';
 export const SIZE=5;
 export const COLORS=['coral','teal','honey','violet'];
@@ -14,7 +15,7 @@ export function drawHand(state,round,random=Math.random){
   const hand=[];for(let n=0;n<3;n++)hand.push(drawPiece(state,hand,random,round));return hand;
 }
 export function createGame(random=Math.random){
-  const state={version:6,board:Array(25).fill(null),tray:[],nextTray:[],round:1,score:0,turns:0,nextId:1,over:false,endReason:null};
+  const state={version:6,board:Array(25).fill(null),tray:[],nextTray:[],round:1,score:0,turns:0,nextId:1,over:false,endReason:null,combo:{count:0,lastRound:null}};
   for(const[at,color]of[[2,'coral'],[6,'teal'],[8,'coral'],[16,'teal'],[18,'honey'],[22,'honey']])
     state.board[at]={id:state.nextId++,color};
   state.tray=drawHand(state,1,random);state.nextTray=drawHand(state,2,random);return state;
@@ -66,11 +67,15 @@ export function probeLine(board,at,piece,physics=BASIC_PHYSICS){
 }
 export function playTurn(state,at,option,random=Math.random,physics=BASIC_PHYSICS){
   if(state.over||!Number.isInteger(option)||option<0||option>=3||!state.tray[option])throw Error('Turno no disponible');
-  const result=simulate(state.board,at,state.tray[option],physics);
+  const base=simulate(state.board,at,state.tray[option],physics);
+  const combo=scoreCombo(state.combo,state.round,base.total>0),multiplier=base.total?combo.count:1;
+  const result={...base,total:base.total*multiplier,baseTotal:base.total,multiplier,
+    frames:base.frames.map(frame=>frame.kind==='clear'?{...frame,baseGain:frame.gain,gain:frame.gain*multiplier,multiplier}:frame)};
   const next={...state,board:result.board,tray:clone(state.tray),nextTray:clone(state.nextTray),
     score:state.score+result.total,turns:state.turns+1,over:result.board.every(Boolean),endReason:result.board.every(Boolean)?'full':null};
   next.tray[option]=null;const newRound=next.tray.every(p=>p===null);
   if(newRound){next.round++;next.tray=next.nextTray;next.nextTray=drawHand(next,next.round+1,random);}
+  next.combo=readCombo(combo,next.round);
   return {state:next,newRound,...result};
 }
 function validState(s,schema=6){
@@ -100,5 +105,6 @@ export function restoreGame(saved,random=Math.random){
   // stored coordinate, option, point and forecast unless an old line must clear.
   const result=resolveBoard(next.board);next.board=result.board;next.score+=result.total;
   next.over=next.board.every(Boolean)||(saved.version===6&&saved.endReason==='no-lines');
-  next.endReason=next.over?(next.board.every(Boolean)?'full':'no-lines'):null;return next;
+  next.endReason=next.over?(next.board.every(Boolean)?'full':'no-lines'):null;
+  next.combo=readCombo(next.combo,next.round);return next;
 }

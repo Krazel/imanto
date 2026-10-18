@@ -1,7 +1,7 @@
 import {t} from './i18n.mjs';
 export function celebrationFor(frame){
-  const combo=frame.lineCount>1,all=!!frame.allClear;
-  const comboLabel=frame.lineCount===2?'¡Combo doble!':frame.lineCount===3?'¡Combo triple!':`¡Combo ×${frame.lineCount}!`;
+  const combo=frame.lineCount>1||frame.multiplier>1,all=!!frame.allClear;
+  const comboLabel=frame.multiplier>1?`¡Combo ×${frame.multiplier}!`:frame.lineCount===2?'¡Doble línea!':frame.lineCount===3?'¡Triple línea!':`¡${frame.lineCount} líneas!`;
   return {kind:all?'all':combo?'combo':'line',title:all?'¡Tablero limpio!':combo?comboLabel:'¡Línea!',
     detail:`${combo?frame.lineCount+' líneas · ':''}+${frame.gain} puntos`,
     charge:all?440:combo?340:180,linger:all?650:combo?350:100};
@@ -13,15 +13,22 @@ export function createCelebration(board,game){
     game.classList.remove('celebrating-all');
   }
   function start(frame,tiles){
-    finish();const source=celebrationFor(frame),info={...source,title:frame.lineCount>3&&!frame.allClear?t('¡Combo ×{n}!',{n:frame.lineCount}):t(source.title),detail:frame.lineCount>1?t('{n} líneas · +{points} puntos',{n:frame.lineCount,points:frame.gain}):t('+{points} puntos',{points:frame.gain})};
+    finish();const source=celebrationFor(frame),info={...source,title:frame.allClear?t('¡Tablero limpio!'):frame.multiplier>1?t('¡Combo ×{n}!',{n:frame.multiplier}):frame.lineCount>3?t('¡{n} líneas!',{n:frame.lineCount}):t(source.title),detail:frame.multiplier>1?t('{base} × {combo} · +{points}',{base:frame.baseGain,combo:frame.multiplier,points:frame.gain}):frame.lineCount>1?t('{n} líneas · +{points} puntos',{n:frame.lineCount,points:frame.gain}):t('+{points} puntos',{points:frame.gain})};
     board.style.setProperty('--fx-charge',`${info.charge}ms`);
     board.classList.add('celebrating',`celebrating-${info.kind}`);if(info.kind==='all')game.classList.add('celebrating-all');
     for(const tile of tiles)tile.classList.add('winning',`winning-${info.kind}`);
     for(const line of frame.lines){
       const beam=document.createElement('i');beam.className=`win-beam beam-${line.axis}`;beam.style.setProperty('--line',line.index);layer.append(beam);
     }
+    // Two short star trails per cleared cell, bounded by the 25-cell board.
+    for(const at of frame.cleared||[])for(let n=0;n<2;n++){
+      const glint=document.createElement('i');glint.className='win-glint';
+      glint.style.setProperty('--origin-x',`${(at%5+.5)*20}%`);glint.style.setProperty('--origin-y',`${(Math.floor(at/5)+.5)*20}%`);
+      const angle=(at*1.7+n*3.1);glint.style.setProperty('--dx',`${Math.cos(angle)*(n?65:35)}px`);glint.style.setProperty('--dy',`${Math.sin(angle)*(n?65:35)-25}px`);
+      glint.style.setProperty('--spark-delay',`${at%5*18+n*30}ms`);layer.append(glint);
+    }
     const ring=document.createElement('i');ring.className='win-ring';layer.append(ring);
-    const sparks=info.kind==='line'?10:info.kind==='all'?32:20;
+    const sparks=info.kind==='line'?14:info.kind==='all'?36:26;
     for(let n=0;n<sparks;n++){
       const spark=document.createElement('i'),angle=n*Math.PI*2/sparks;
       spark.className='win-spark';spark.style.setProperty('--dx',`${Math.cos(angle)*150}px`);spark.style.setProperty('--dy',`${Math.sin(angle)*150}px`);

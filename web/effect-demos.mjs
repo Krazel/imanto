@@ -5,6 +5,9 @@ export const DEMOS=Object.freeze({
   double:{label:'Combo doble',description:'Fila y columna a la vez: 200 puntos.'},
   triple:{label:'Combo triple',description:'Tres líneas con una expulsión: 450 puntos.'},
   all:{label:'Tablero limpio',description:'Las dos últimas líneas: se retiran todas las fichas.'},
+  streak:{label:'Racha ×3',description:'Una línea renueva la racha y gana 150 puntos.'},
+  'streak-last':{label:'Última tanda',description:'Completa una línea en la última tanda disponible.'},
+  expiry:{label:'Fin de racha',description:'Una jugada sin línea termina la segunda tanda y pierde la racha.'},
   dead:{label:'Sin salida',description:'Miel en fila 2, columna 2: ya no se puede puntuar, quedan 6 huecos.'},
   escape:{label:'Ver una solución',description:'Con un reparto posible, siete jugadas completan la segunda columna: +50 puntos.'}
 });
@@ -23,8 +26,12 @@ export function effectScene(kind='double'){
     state.nextTray=['teal','honey','violet'].map(color=>({id:state.nextId++,color}));
     const moves=kind==='escape'?[[23,'honey'],[6,'teal'],[18,'violet'],[11,'teal'],[22,'honey'],[23,'violet'],[16,'teal']].map(([at,color])=>({at,color})):null;
     return {state,at:kind==='escape'?23:6,option:1,kind,moves};
-  }else if(kind==='single'){
+  }else if(kind==='single'||kind==='streak'||kind==='streak-last'){
     for(const i of[10,11,13,14])add(i,'coral');add(0,'teal');
+    if(kind!=='single'){state.combo={count:2,lastRound:1};state.score=150;state.turns=kind==='streak-last'?4:2;state.round=kind==='streak-last'?2:1;}
+  }else if(kind==='expiry'){
+    add(0,'teal');state.combo={count:2,lastRound:1};state.round=2;state.turns=5;state.score=150;
+    state.tray=[null,null,{id:state.nextId++,color:'honey'}];return {state,at:12,option:2,kind};
   }else if(kind==='triple'){
     for(const i of[0,1,3,4,20,21,23,24,9,19,7,13,17])add(i,'coral');
     color='teal';
