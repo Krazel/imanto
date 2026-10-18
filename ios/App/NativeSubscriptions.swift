@@ -45,6 +45,7 @@ struct MembershipClaim { let gameID: String; let receipt: String }
     private var products: [Product] = []
     private var listener: Task<Void, Never>?
     private var processing = false
+    private var refreshWaiters: [CheckedContinuation<Void, Never>] = []
     private var operating = false
     var suppressAutomaticAds: Bool { config.enabled && (processing || !resolved || active) }
     init(owner: GameController) { self.owner = owner }
@@ -69,9 +70,17 @@ struct MembershipClaim { let gameID: String; let receipt: String }
         Task { await refresh(); notify() }
     }
     func refresh() async {
-        guard config.enabled, !config.plans.isEmpty, !processing else { return }
+        guard config.enabled, !config.plans.isEmpty else { return }
+        if processing {
+            await withCheckedContinuation { refreshWaiters.append($0) }
+            return
+        }
         processing = true
-        defer { processing = false }
+        defer {
+            processing = false
+            let waiters = refreshWaiters; refreshWaiters.removeAll()
+            for waiter in waiters { waiter.resume() }
+        }
         let ids = Set(config.plans.map(\.productID))
         var entitled = false, unlimitedEntitlement = false, signed: [String] = [], verified: [Transaction] = []
         for await result in Transaction.currentEntitlements {

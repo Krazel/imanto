@@ -5,8 +5,13 @@ import WebKit
 
 @MainActor private final class TestWallet: MembershipWalletAuthority {
     var claims = Set<String>()
+    var delay: UInt64 = 0
+    var began = false, finished = false
     func reconcile(signedTransactions: [String]) async throws -> MembershipWalletSnapshot {
-        MembershipWalletSnapshot(balance: 10, revivesRemaining: claims.isEmpty ? 1 : 0)
+        began = true
+        if delay > 0 { try await Task.sleep(nanoseconds: delay) }
+        finished = true
+        return MembershipWalletSnapshot(balance: 10, revivesRemaining: claims.isEmpty ? 1 : 0)
     }
     func claim(gameID: String, kind: String) async throws -> MembershipClaim? {
         guard kind == "revive" else { return nil }
@@ -16,6 +21,23 @@ import WebKit
     }
 }
 @MainActor final class MonetizationTests: XCTestCase {
+    func testConcurrentRefreshWaitsForTheAuthoritativeResult() async throws {
+        let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
+        await controller.subscriptions.refresh()
+        let original = controller.subscriptions.wallet, slow = TestWallet()
+        slow.delay = 200_000_000; controller.subscriptions.wallet = slow
+        defer { controller.subscriptions.wallet = original }
+        let first = Task { await controller.subscriptions.refresh() }
+        for _ in 0..<300 {
+            if slow.began { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(slow.began)
+        await controller.subscriptions.refresh()
+        XCTAssertTrue(slow.finished, "A concurrent status request must wait rather than return stale entitlement data")
+        await first.value
+        XCTAssertFalse(controller.subscriptions.suppressAutomaticAds)
+    }
     func testLocalBenefitsPersistAndKeepSeparateGameAllowances() throws {
         let plan = MembershipConfiguration().plans[2]
         let now = Date(timeIntervalSince1970: 1_792_319_400)

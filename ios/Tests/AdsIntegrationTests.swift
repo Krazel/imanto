@@ -46,7 +46,8 @@ import WebKit
         for _ in 0..<600 {
             if controller.navigationReady {
                 await controller.subscriptions.refresh()
-                if !controller.subscriptions.suppressAutomaticAds { return controller }
+                if !controller.subscriptions.suppressAutomaticAds,
+                   let idle = try? await controller.web.evaluateJavaScript("document.querySelector('#board')?.getAttribute('aria-busy')==='false'"), idle as? Bool == true { return controller }
             }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
@@ -71,8 +72,24 @@ import WebKit
         let banner = try XCTUnwrap(fixture.banner)
         XCTAssertEqual(owner.web.frame.maxY, banner.frame.minY, accuracy: 1)
         XCTAssertEqual(banner.frame.maxY, owner.view.safeAreaLayoutGuide.layoutFrame.maxY, accuracy: 1)
+        // WKWebView has its own compositor; takeSnapshot avoids a blank GPU backing
+        // in UIKit drawHierarchy, then captures the measured native banner below it.
+        let gameImage: UIImage = try await withCheckedThrowingContinuation { continuation in
+            owner.web.takeSnapshot(with: nil) { image, error in
+                if let image = image { continuation.resume(returning: image) }
+                else { continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown)) }
+            }
+        }
+        XCTAssertNotNil(banner.superview)
         let renderer = UIGraphicsImageRenderer(bounds: owner.view.bounds)
-        let image = renderer.image { _ in owner.view.drawHierarchy(in: owner.view.bounds, afterScreenUpdates: true) }
+        let image = renderer.image { context in
+            owner.view.backgroundColor?.setFill(); context.cgContext.fill(owner.view.bounds)
+            gameImage.draw(in: owner.web.frame)
+            context.cgContext.saveGState()
+            context.cgContext.translateBy(x: banner.frame.minX, y: banner.frame.minY)
+            banner.layer.render(in: context.cgContext)
+            context.cgContext.restoreGState()
+        }
         try XCTUnwrap(image.pngData()).write(to: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("imanto-ads-qa.png"))
         _ = try await send(owner.web, action: "banner", kind: "banner", id: "qa-hide")
         XCTAssertNil(fixture.banner)
