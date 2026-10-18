@@ -15,6 +15,7 @@ import {createHaptics} from './haptics.mjs';
 import {readCombo} from './combo.mjs';
 import {createPersonalBest} from './personal-best.mjs';
 import {installTrayDrag} from './drag.mjs';
+import {installBoardPress} from './board-press.mjs';
 const $=s=>document.querySelector(s);
 const boardEl=$('#board'),cellsEl=$('#cells'),piecesEl=$('#pieces'),previewEl=$('#preview');
 const trayEl=$('#tray'),status=$('#status'),menu=$('#menu'),help=$('#instructions');
@@ -32,7 +33,7 @@ const names={coral:t('coral'),teal:t('turquesa'),honey:t('miel'),violet:t('viole
 const spoken=p=>names[p.color];
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
 let state,selected=0,busy=false,editing=false,draft=null,experiment=null,triggerId=null,removingForRevive=false;
-let previewAt=null,pressAt=null,ignoreClickUntil=0,bonusTimer,statusTimer,migrated=false,guidanceSeen=false;
+let previewAt=null,bonusTimer,statusTimer,migrated=false,guidanceSeen=false;
 let removalKind='revive';
 let demoKind=Object.hasOwn(DEMOS,effectParam)?effectParam:'double',demoSpeed=1,demoAt=12;
 const effectRoom=IS_EFFECTS?createEffectsRoom({onPlay:playDemo,onPrepare:()=>prepareDemo(),onSpeed:setEffectSpeed}):null;
@@ -222,14 +223,18 @@ const trayDrag=installTrayDrag({tray:trayEl,board:boardEl,
   onHover:at=>{clearPreview();if(at!==null){preview(at);haptics.prepare();}},
   onFinish:()=>renderTray(),onDrop:(at,option)=>{selected=option;place(at);}
 });
+const boardPress=installBoardPress({board:boardEl,
+  canStart:at=>!busy&&!menu.open&&!help.open&&!restartConfirm.open&&!cells[at].disabled,
+  onHover:at=>{clearPreview();if(at!==null){preview(at);if(!editing)haptics.prepare();}},
+  onDrop:at=>place(at)
+});
 for(let at=0;at<25;at++){
   const cell=cells[at];cell.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch')preview(at);});cell.addEventListener('focus',()=>preview(at));
-  cell.addEventListener('pointerdown',e=>{if(!cell.disabled&&!busy&&!editing)haptics.prepare();if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;e.preventDefault();pressAt=at;ignoreClickUntil=Date.now()+600;preview(at);});
-  cell.addEventListener('click',()=>{if(Date.now()>ignoreClickUntil)place(at);});
+  cell.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&!cell.disabled&&!busy&&!editing)haptics.prepare();});
+  cell.addEventListener('click',()=>{if(!boardPress.suppressClick())place(at);});
   cell.addEventListener('keydown',e=>{const d={ArrowRight:1,ArrowLeft:-1,ArrowUp:-5,ArrowDown:5}[e.key];if(!d)return;e.preventDefault();for(let n=at+d;n>=0&&n<25;n+=d)if(!cells[n].disabled){cells[n].focus();break;}});
 }
-document.addEventListener('pointerup',e=>{if(pressAt===null)return;const at=pressAt;pressAt=null;const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');clearPreview();if(hit&&Number(hit.dataset.at)===at)place(at);});
-document.addEventListener('pointercancel',()=>{pressAt=null;clearPreview();});boardEl.addEventListener('pointerleave',()=>{if(pressAt===null)clearPreview();});
+boardEl.addEventListener('pointerleave',()=>{if(!boardPress.active())clearPreview();});
 function setPhysics(settings){physics=normalizePhysics(settings);clearPreview();status.textContent=t('Parámetros listos: pulsa Simular');}
 function loadScene(name){if(busy)return;const scene=laboratoryScene(name,state);draft=scene.state;triggerId=scene.triggerId;experiment=structuredClone(draft);editing=true;lab.setEditing(true);clearPreview();piecesEl.replaceChildren();renderBoard(draft.board);renderTray();lab.showStats(draft.board,0,true);showScore(draft.score);status.textContent=t('Escena preparada: pulsa Simular');}
 function toggleEditing(){if(busy)return;editing=!editing;if(editing){draft=structuredClone(state);experiment=null;}else{draft=null;experiment=null;triggerId=null;showScore(state.score);}lab.setEditing(editing);clearPreview();renderBoard(editing?draft.board:state.board);renderTray();lab.showStats(editing?draft.board:state.board,0,editing);status.textContent=editing?t('Toca casillas con el pincel; después, Simular'):t('Elige un color y toca un hueco.');}

@@ -1,6 +1,6 @@
 # Imanto
 
-Color puzzle by Krazel Games. Native iOS candidate 0.18 (1), English/Spanish.
+Color puzzle by Krazel Games. Native iOS candidate 0.18.1 (1), English/Spanish.
 Random openings, combos, persistent score and game. Recorded audio uses AVAudioPlayer.
 Subscriptions use StoreKit 2 and local benefit counters verified with StoreKit. Monthly block
 helpers and included daily revives are separate, each capped at one per game.

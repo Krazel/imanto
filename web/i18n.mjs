@@ -57,6 +57,7 @@ export const EN={
   '{base} × {combo} · +{points}':'{base} × {combo} · +{points}',
   'Cada jugada con líneas aumenta tu combo: ×2, ×3… y multiplica los puntos. Puedes continuar en esta tanda o en la siguiente; cada acierto renueva el margen.':'Each scoring move grows your combo: ×2, ×3… and multiplies your points. Keep it going in this set or the next one; every clear renews the window.',
   'Toca una ficha y un hueco, o arrástrala desde la tanda hasta el tablero.':'Tap a tile and an empty cell, or drag a tile from the set onto the board.',
+  'Toca una ficha y un hueco, o arrástrala desde la tanda hasta el tablero. También puedes mantener el dedo en un hueco, deslizarlo y soltar para colocar.':'Tap a tile and an empty cell, or drag a tile from the set onto the board. You can also hold an empty cell, slide your finger and release to place.',
   'Racha ×3':'Streak ×3','Última tanda':'Last set','Fin de racha':'Streak ends',
   'Una línea renueva la racha y gana 150 puntos.':'One line renews the streak and earns 150 points.',
   'Completa una línea en la última tanda disponible.':'Clear a line in the last available set.',
