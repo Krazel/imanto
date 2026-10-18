@@ -18,16 +18,25 @@ final class GameController: UIViewController, WKNavigationDelegate {
     private(set) var scriptErrors: [String] = []
     let audio = NativeAudio()
     var haptics: NativeHaptics!
+    var ads: NativeAds!
+    var subscriptions: NativeSubscriptions!
+    private var webBottom: NSLayoutConstraint!
+    func reserveBannerHeight(_ height: CGFloat) { webBottom.constant = -max(0, height); view.layoutIfNeeded() }
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 1, green: 0.969, blue: 0.922, alpha: 1)
         haptics = NativeHaptics(view: view)
+        ads = NativeAds(owner: self)
+        subscriptions = NativeSubscriptions(owner: self)
+        subscriptions.wallet = NativeWallet()
         let configuration = WKWebViewConfiguration()
         configuration.preferences.isTextInteractionEnabled = true
         let handler = WeakHandler(self)
         configuration.userContentController.add(handler, name: "imantoAudio")
         configuration.userContentController.add(handler, name: "imantoText")
         configuration.userContentController.add(handler, name: "imantoHaptics")
+        configuration.userContentController.add(handler, name: "imantoAds")
+        configuration.userContentController.add(handler, name: "imantoSubscriptions")
         configuration.userContentController.addUserScript(WKUserScript(source: "window.imantoCapabilities={haptics:\(haptics.supported ? "true" : "false")};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         #if DEBUG
         configuration.userContentController.add(handler, name: "imantoDiagnostics")
@@ -47,12 +56,14 @@ final class GameController: UIViewController, WKNavigationDelegate {
         web.scrollView.bounces = false
         web.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(web)
+        webBottom = web.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        subscriptions.start()
         // Keep the entire game and dialogs inside the actual device safe area.
         NSLayoutConstraint.activate([
             web.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             web.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             web.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            web.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            webBottom
         ])
         if let root = Bundle.main.url(forResource: "Web", withExtension: nil) {
             web.loadFileURL(root.appendingPathComponent("index.html"), allowingReadAccessTo: root)
@@ -71,13 +82,17 @@ final class GameController: UIViewController, WKNavigationDelegate {
             audio.receive(body)
         } else if message.name == "imantoHaptics", let body = message.body as? [String: Any] {
             haptics.receive(body)
+        } else if message.name == "imantoAds", let body = message.body as? [String: Any] {
+            ads.receive(body)
+        } else if message.name == "imantoSubscriptions", let body = message.body as? [String: Any] {
+            subscriptions.receive(body)
         }
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     @objc private func suspend() { haptics.active = false; audio.active = false; audio.pause() }
-    @objc private func resume() { haptics.active = true; audio.active = true; audio.reconcile() }
+    @objc private func resume() { haptics.active = true; audio.active = true; audio.reconcile(); Task { await subscriptions.refresh() } }
     @objc private func interrupted(_ notification: Notification) {
         guard let number = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: number) else { return }

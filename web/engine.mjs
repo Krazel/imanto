@@ -4,6 +4,7 @@ export {BASIC_PHYSICS,LAB_PHYSICS,normalizePhysics,repelOnce,contactPairs} from 
 export const SIZE=5;
 export const COLORS=['coral','teal','honey','violet'];
 export const VIOLET_ROUND=4;
+export const OPENING_TILES=Object.freeze({min:4,max:8});
 const clone=b=>b.map(p=>p?{...p}:null);
 export function drawPiece(state,others=[],random=Math.random,round=state.round||1){
   const palette=round>=VIOLET_ROUND?COLORS:COLORS.slice(0,3);
@@ -14,11 +15,61 @@ export function drawPiece(state,others=[],random=Math.random,round=state.round||
 export function drawHand(state,round,random=Math.random){
   const hand=[];for(let n=0;n<3;n++)hand.push(drawPiece(state,hand,random,round));return hand;
 }
-export function createGame(random=Math.random){
-  const state={version:6,board:Array(25).fill(null),tray:[],nextTray:[],round:1,score:0,turns:0,nextId:1,over:false,endReason:null,combo:{count:0,lastRound:null}};
-  for(const[at,color]of[[2,'coral'],[6,'teal'],[8,'coral'],[16,'teal'],[18,'honey'],[22,'honey']])
-    state.board[at]={id:state.nextId++,color};
+export function createGame(random=Math.random,opening={}){
+  const min=opening.min??OPENING_TILES.min,max=opening.max??OPENING_TILES.max;
+  if(!Number.isInteger(min)||!Number.isInteger(max)||min<1||max>8||min>max)throw Error('Invalid opening bounds (1–8 tiles)');
+  const roll=n=>Math.min(n-1,Math.max(0,Math.floor(random()*n)));
+  const state={version:6,board:Array(25).fill(null),tray:[],nextTray:[],round:1,score:0,turns:0,nextId:1,over:false,endReason:null,combo:{count:0,lastRound:null},revive:'available'};
+  const count=min+roll(max-min+1),positions=Array.from({length:25},(_,i)=>i);
+  for(let n=positions.length-1;n>0;n--){const j=roll(n+1);[positions[n],positions[j]]=[positions[j],positions[n]];}
+  for(const at of positions.slice(0,count)){
+    let color=roll(3);state.board[at]={id:state.nextId++,color:COLORS[color]};
+    // An opening must not contain an already completed (unpaid) line.
+    if(completedLines(state.board).length)state.board[at].color=COLORS[(color+1)%3];
+  }
   state.tray=drawHand(state,1,random);state.nextTray=drawHand(state,2,random);return state;
+}
+export const reviveStatus=state=>state.revive??'available';
+export const blockRemovalStatus=state=>state.blockRemoval??'available';
+export function beginCreditRemoval(state){
+  if(state.over||blockRemovalStatus(state)!=='available'||!state.gameId||!state.board.some(Boolean))throw Error('Removal unavailable');
+  return {...state,blockRemoval:'pending'};
+}
+export function settleCreditRemoval(state,claim){
+  if(blockRemovalStatus(state)!=='pending')return state;
+  if(claim?.denied===true&&claim.gameId===state.gameId){
+    return {...state,blockRemoval:'available'};
+  }
+  if(claim?.ok!==true||claim.gameId!==state.gameId||typeof claim.receipt!=='string'||!claim.receipt)return state;
+  return {...state,blockRemoval:'earned',removalReceipt:claim.receipt};
+}
+export function removeForCredit(state,at){
+  if(blockRemovalStatus(state)!=='earned'||!Number.isInteger(at)||!state.board[at])throw Error('Removal unavailable');
+  const board=clone(state.board);board[at]=null;return {...state,board,over:false,endReason:null,blockRemoval:'used'};
+}
+export function beginPaidRevive(state){
+  if(!state.over||reviveStatus(state)!=='available'||!state.gameId)throw Error('Revive unavailable');
+  return {...state,revive:'pending',reviveSource:'paid'};
+}
+export function settlePaidRevive(state,claim){
+  if(reviveStatus(state)!=='pending'||state.reviveSource!=='paid')return state;
+  if(claim?.denied===true&&claim.gameId===state.gameId)return {...state,revive:'available',reviveSource:null};
+  if(claim?.ok!==true||claim.gameId!==state.gameId||!claim.receipt)return state;
+  return {...state,revive:'earned',reviveReceipt:claim.receipt};
+}
+export function beginRevive(state){
+  if(!state.over||reviveStatus(state)!=='available')throw Error('Revive unavailable');
+  return {...state,revive:'pending',reviveSource:'video'};
+}
+export function settleRevive(state,{shown=false,earned=false,uncertain=false}={}){
+  if(reviveStatus(state)!=='pending')return state;
+  return {...state,revive:uncertain?'used':shown?(earned?'earned':'used'):'available'};
+}
+export function removeForRevive(state,at){
+  if(!state.over||reviveStatus(state)!=='earned'||!Number.isInteger(at)||!state.board[at])throw Error('Revive removal unavailable');
+  const board=clone(state.board);board[at]=null;
+  // No pulse, extra hand, points, turn or combo reward: remove exactly one tile.
+  return {...state,board,over:false,endReason:null,revive:'used'};
 }
 export function completedLines(board){
   const lines=[];
@@ -82,7 +133,7 @@ function validState(s,schema=6){
   const old=schema<5,legacy=schema===1;
   const piece=p=>p&&Number.isSafeInteger(p.id)&&p.id>0&&COLORS.includes(p.color)&&
     (old?[-1,1].includes(p.pole):!Object.hasOwn(p,'pole'));
-  if(!s||s.version!==schema||!Array.isArray(s.board)||s.board.length!==25||
+  if(!s||typeof s!=='object'||('revive' in s&&!['available','pending','earned','used'].includes(s.revive))||('blockRemoval' in s&&!['available','pending','earned','used'].includes(s.blockRemoval))||s.version!==schema||!Array.isArray(s.board)||s.board.length!==25||
     !s.board.every(p=>p===null||piece(p))||!Array.isArray(s.tray)||s.tray.length!==3||
     !s.tray.every(p=>piece(p)||(!legacy&&p===null))||!s.tray.some(Boolean)||
     !Number.isSafeInteger(s.score)||s.score<0||!Number.isSafeInteger(s.turns)||s.turns<0||
@@ -106,5 +157,10 @@ export function restoreGame(saved,random=Math.random){
   const result=resolveBoard(next.board);next.board=result.board;next.score+=result.total;
   next.over=next.board.every(Boolean)||(saved.version===6&&saved.endReason==='no-lines');
   next.endReason=next.over?(next.board.every(Boolean)?'full':'no-lines'):null;
-  next.combo=readCombo(next.combo,next.round);return next;
+  next.combo=readCombo(next.combo,next.round);
+  // An interrupted fullscreen must never offer a second ad on reopening.
+  // An already earned reward survives until the player chooses a tile.
+  if(next.removalSource==='credit'&&!next.blockRemoval){next.blockRemoval=next.revive;next.revive='available';delete next.removalSource;}
+  if(next.revive==='pending'&&next.reviveSource!=='paid')next.revive='used';
+  return next;
 }

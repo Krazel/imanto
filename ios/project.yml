@@ -4,7 +4,7 @@ options:
     iOS: '16.0'
 settings:
   base:
-    MARKETING_VERSION: '0.15'
+    MARKETING_VERSION: '0.18'
     CURRENT_PROJECT_VERSION: '1'
     SWIFT_VERSION: '5.0'
     TARGETED_DEVICE_FAMILY: '1,2'
@@ -14,6 +14,8 @@ targets:
     platform: iOS
     sources:
       - path: App
+        excludes:
+          - '*.plist'
       - path: Web
         type: folder
         buildPhase: resources

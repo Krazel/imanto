@@ -41,17 +41,18 @@ test('all three versions still move free direct neighbors together and leave dia
 });
 test('three initial saves clone one fresh common board, hand and forecast without touching main or lab',()=>{
   const s=storage();let calls=0;const random=()=>{calls++;return .25;};
-  const copies=Object.keys(VARIANTS).map(id=>loadComparison(id,s,random));
-  assert.equal(calls,6);assert.ok(copies.every(isValidSave));
+  const first=loadComparison('no-turn',s,random),firstCalls=calls;
+  const copies=[first,...['no-row','simple'].map(id=>loadComparison(id,s,random))];
+  assert.equal(calls,firstCalls);assert.ok(copies.every(isValidSave));
   assert.deepEqual(copies[0],copies[1]);assert.deepEqual(copies[1],copies[2]);
-  copies[0].board[2]=null;assert.ok(copies[1].board[2]);
+  const occupied=first.board.findIndex(Boolean);copies[0].board[occupied]=null;assert.ok(copies[1].board[occupied]);
   assert.equal(s.data.get('krazel-imanes-v5'),'main untouched');
   assert.equal(s.data.get('krazel-imanes-lab-v5'),'lab untouched');
 });
 test('playing and reloading one variant preserves its hand without advancing the other two',()=>{
   const s=storage(),baseline=loadComparison('simple',s,()=>.2);
   loadComparison('no-turn',s);loadComparison('no-row',s);
-  const next=playTurn(baseline,0,0,()=>.1,VARIANTS.simple).state;
+  const next=playTurn(baseline,baseline.board.findIndex(p=>!p),0,()=>.1,VARIANTS.simple).state;
   s.setItem(variantSaveKey('simple'),JSON.stringify(next));
   assert.deepEqual(loadComparison('simple',s),next);assert.equal(next.tray[0],null);
   assert.deepEqual(loadComparison('no-turn',s),baseline);assert.deepEqual(loadComparison('no-row',s),baseline);
@@ -59,7 +60,7 @@ test('playing and reloading one variant preserves its hand without advancing the
 test('repeat common start resets only that version and restores its original forecast',()=>{
   const s=storage(),baseline=loadComparison('simple',s,()=>.2);
   const other=loadComparison('no-row',s);
-  const next=playTurn(baseline,0,0,()=>.1,VARIANTS.simple).state;
+  const next=playTurn(baseline,baseline.board.findIndex(p=>!p),0,()=>.1,VARIANTS.simple).state;
   s.setItem(variantSaveKey('simple'),JSON.stringify(next));
   assert.deepEqual(loadComparison('simple',s,()=>.9,{restart:true}),baseline);
   assert.deepEqual(loadComparison('no-row',s),other);

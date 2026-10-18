@@ -1,0 +1,21 @@
+# Optional native QA configuration. Ordinary project.yml remains SDK-free.
+# Both runtime gates remain OFF even when this target is compiled.
+include:
+  - project.yml
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    exactVersion: 13.11.0
+  GoogleUserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git
+    exactVersion: 3.1.0
+targets:
+  Imanto:
+    dependencies:
+      - package: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.ads.plist
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) IMANTO_TESTFLIGHT
+        OTHER_LDFLAGS: $(inherited) -ObjC

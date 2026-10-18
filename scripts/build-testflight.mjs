@@ -49,7 +49,7 @@ try {
   run('security', ['import', certificate, '-k', keychain, '-P', process.env.IOS_DISTRIBUTION_P12_PASSWORD, '-T', '/usr/bin/codesign', '-T', '/usr/bin/security']);
   run('security', ['list-keychains', '-d', 'user', '-s', keychain]);
   run('security', ['set-key-partition-list', '-S', 'apple-tool:,apple:,codesign:', '-s', '-k', password, keychain]);
-  run('xcodegen', ['generate'], {cwd:'ios'});
+  run('xcodegen', ['generate', '--spec', 'project.ads.yml'], {cwd:'ios'});
   const archive = path.join(temp, 'Imanto.xcarchive');
   run('xcodebuild', ['archive', '-project', 'ios/Imanto.xcodeproj', '-scheme', 'Imanto', '-configuration', 'Release', '-destination', 'generic/platform=iOS', '-archivePath', archive, 'ARCHS=arm64', 'ONLY_ACTIVE_ARCH=NO', 'CODE_SIGN_STYLE=Manual', `DEVELOPMENT_TEAM=${cfg.teamId}`, 'CODE_SIGN_IDENTITY=Apple Distribution', `PROVISIONING_PROFILE_SPECIFIER=${provision.Name}`]);
   const app = path.join(archive, 'Products', 'Applications', 'Imanto.app');

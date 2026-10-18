@@ -42,8 +42,16 @@
       <p class="eyebrow">IMANTO</p><h2 id="menu-title">En pausa</h2><p id="menu-copy">Tu partida sigue aquí.</p>
       <div id="menu-stats" class="menu-stats"><div><strong id="menu-score">0</strong><span>puntos</span></div><div><strong id="menu-best">0</strong><span>Récord personal</span><span id="menu-turns"></span></div></div>
       <p id="end-explanation" class="end-explanation" hidden></p>
-      <button id="continue" class="primary">Seguir jugando</button><button id="new-game" class="secondary">Nueva partida</button><button id="view-board" class="secondary outline" hidden>Ver tablero</button><button id="menu-help" class="text-button">Cómo jugar</button>
+      <button id="continue" class="primary">Seguir jugando</button>
+      <button id="credit-removal" class="secondary" hidden>Quitar una ficha · usar una retirada</button>
+      <button id="revive" class="primary" hidden>Revivir viendo un anuncio</button>
+      <button id="paid-revive" class="primary" hidden>Revivir · incluido en tu plan</button>
+      <p id="revive-copy" class="end-explanation" hidden>Elimina una ficha del tablero. Una sola vez por partida.</p>
+      <button id="membership-upgrade" class="text-button" hidden>Cambiar de plan</button>
+      <button id="new-game" class="secondary">Nueva partida</button><button id="view-board" class="secondary outline" hidden>Ver tablero</button><button id="menu-help" class="text-button">Cómo jugar</button>
       <details class="settings-panel"><summary>Ajustes</summary>
+        <button id="membership-open" class="text-button">Suscripción</button>
+        <button id="ad-privacy" class="text-button" hidden>Privacidad de los anuncios</button>
         <label class="setting-row" for="language">Idioma<select id="language"><option value="auto">Automático (dispositivo)</option><option value="en">English</option><option value="es">Español</option></select></label>
         <label class="setting-row"><span>Efectos de sonido</span><input id="sound-enabled" type="checkbox" checked></label>
         <label class="setting-row"><span>Música</span><input id="music-enabled" type="checkbox"></label>
@@ -56,6 +64,23 @@
       <details class="testing-links"><summary>Pruebas del juego</summary><a href="?effects=1">Animaciones y escenas</a><a href="?lab=1">Laboratorio de imanes</a><a href="/designs.html">Todas las pantallas</a></details>
     </div>
   </dialog>
+  <dialog id="membership" aria-labelledby="membership-title"><div class="dialog-content">
+    <button id="membership-close" class="icon-button close-button" aria-label="Cerrar suscripción">×</button>
+    <p class="eyebrow">IMANTO</p><h2 id="membership-title">Suscripción</h2>
+    <p id="membership-state" role="status">Próximamente. Todavía no se puede comprar.</p>
+    <ul class="membership-benefits">
+      <li>Sin banner ni anuncios entre partidas mientras esté activa.</li>
+      <li>Elimina un bloque del tablero para hacer espacio. Un bloque por partida.</li>
+      <li>Si pierdes, revive con una ayuda incluida en tu plan o viendo un anuncio.</li>
+      <li>Un revivir por partida. Los límites diarios se renuevan a medianoche, hora de España.</li>
+    </ul>
+    <p id="membership-balance" hidden></p>
+    <p id="membership-revives" hidden></p>
+    <div id="membership-plans"></div>
+    <p class="membership-note">Los bloques que no elimines de tu saldo mensual se conservan. Los vídeos siempre son voluntarios.</p>
+    <div class="membership-actions"><button id="membership-restore" class="text-button" disabled>Restaurar compras</button><button id="membership-manage" class="text-button" disabled>Gestionar suscripción</button></div>
+    <p id="membership-terms" class="membership-note" hidden>Suscripción mensual con renovación automática. Puedes cancelarla en los ajustes de Apple. <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">Condiciones de uso</a> · <a href="https://krazel.github.io/imanto/privacy/" target="_blank" rel="noopener">Privacidad</a></p>
+  </div></dialog>
   <dialog id="instructions" class="instructions-dialog" aria-labelledby="help-title">
     <div class="dialog-content">
       <button id="help-close-icon" class="icon-button close-button" aria-label="Cerrar ayuda">×</button>

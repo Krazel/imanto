@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   qa:
-    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main' && !github.event.repository.private
+    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main'
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '22'
       - run: xcodebuild -version && npm ci && npm test && npm run build:ios
-      - run: brew install xcodegen && cd ios && xcodegen generate
+      - run: brew install xcodegen && cd ios && xcodegen generate --spec project.ads.yml
       - run: node scripts/native-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()

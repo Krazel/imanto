@@ -1,4 +1,8 @@
-import {createGame,playTurn,simulate,restoreGame,resolveBoard,BASIC_PHYSICS,normalizePhysics,contactPairs} from './engine.mjs';
+import {createGame,playTurn,simulate,restoreGame,resolveBoard,BASIC_PHYSICS,normalizePhysics,contactPairs,reviveStatus,beginRevive,settleRevive,removeForRevive,beginCreditRemoval,settleCreditRemoval,blockRemovalStatus,removeForCredit,beginPaidRevive,settlePaidRevive} from './engine.mjs';
+import {createAds,createAdCadence,ADS_CONFIG} from './ads.mjs';
+import {createNativeAdProvider} from './native-ads.mjs';
+import {createSubscriptions,MONTHLY_PLAN_PREVIEW} from './subscriptions.mjs';
+import {createNativeSubscriptionProvider} from './native-subscriptions.mjs';
 import {createLaboratory,laboratoryScene} from './lab.mjs';
 import {VARIANTS,variantSaveKey,loadComparison} from './variants.mjs';
 import {MAIN_SAVE_KEY,loadMain} from './main-save.mjs';
@@ -27,8 +31,9 @@ const SAVE=IS_EFFECTS&&Object.hasOwn(DEMOS,effectParam)?`krazel-imanes-effect-de
 const names={coral:t('coral'),teal:t('turquesa'),honey:t('miel'),violet:t('violeta')};
 const spoken=p=>names[p.color];
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
-let state,selected=0,busy=false,editing=false,draft=null,experiment=null,triggerId=null;
+let state,selected=0,busy=false,editing=false,draft=null,experiment=null,triggerId=null,removingForRevive=false;
 let previewAt=null,pressAt=null,ignoreClickUntil=0,bonusTimer,statusTimer,migrated=false,guidanceSeen=false;
+let removalKind='revive';
 let demoKind=Object.hasOwn(DEMOS,effectParam)?effectParam:'double',demoSpeed=1,demoAt=12;
 const effectRoom=IS_EFFECTS?createEffectsRoom({onPlay:playDemo,onPrepare:()=>prepareDemo(),onSpeed:setEffectSpeed}):null;
 const celebration=createCelebration(boardEl,document.querySelector('.game'));
@@ -91,6 +96,11 @@ for(const link of document.querySelectorAll('.variant-links a')){
 }
 function readSave(key){try{return JSON.parse(localStorage.getItem(key));}catch{return null;}}
 const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
+const subscriptions=createSubscriptions({provider:createNativeSubscriptionProvider()});
+const ads=createAds({provider:createNativeAdProvider(),suppressAutomatic:subscriptions.suppressAutomaticAds});
+const adCadence=createAdCadence(storage);
+$('#ad-privacy').hidden=!IS_MAIN||!['banner','interstitial','rewarded'].some(ads.supported);
+$('#ad-privacy').addEventListener('click',()=>ads.privacy());
 const personalBest=createPersonalBest(storage);
 if(IS_EFFECTS)state=effectParam==='1'?restoreGame(readSave(SAVE))||effectScene(demoKind).state:effectScene(demoKind).state;
 else if(VARIANT)state=loadComparison(variantId,storage);
@@ -102,6 +112,8 @@ if(!state&&IS_LAB) {
   }
 }
 if(!state) state=createGame(Math.random,physics);
+function identifyGame(){if(IS_MAIN&&!state.gameId)state.gameId=globalThis.crypto?.randomUUID?.()||`game-${Date.now()}-${Math.random().toString(36).slice(2)}`;}
+identifyGame();
 if(IS_MAIN){try{guidanceSeen=localStorage.getItem('krazel-imanes-guidance-v1')==='done';}catch{}if(state.turns>0)finishGuidance();}
 function finishGuidance(){guidanceSeen=true;if(IS_MAIN)try{localStorage.setItem('krazel-imanes-guidance-v1','done');}catch{}}
 function idleMessage(){return IS_MAIN?(guidanceSeen?'':t('Elige una ficha y toca un hueco.')):t('Elige un color y toca un hueco.');}
@@ -139,7 +151,8 @@ function renderBoard(board) {
   });
   for(const el of existing.values())el.remove();
   cells.forEach((cell,at)=>{const p=board[at];cell.classList.toggle('empty',!p);
-    cell.disabled=busy||(!editing&&(!!p||state.over));
+    cell.disabled=busy||(removingForRevive?!p:!editing&&(!!p||state.over));
+    cell.classList.toggle('revive-target',removingForRevive&&!!p);
     cell.setAttribute('aria-label',t('Fila {row}, columna {col}, {tile}',{row:Math.floor(at/5)+1,col:at%5+1,tile:p?spoken(p):t('vacía')}));
   });
   boardEl.classList.toggle('editing',editing);
@@ -149,7 +162,7 @@ function renderTray(){
   state.tray.forEach((p,i)=>{
     const button=document.createElement('button');button.className='choice';button.dataset.option=i;
     if(!p){button.classList.add('used');button.disabled=true;button.setAttribute('aria-label',t('Opción {n}: ya colocada',{n:i+1}));const mark=document.createElement('span');mark.className='chip';mark.textContent='✓';mark.setAttribute('aria-hidden','true');button.append(mark);trayEl.append(button);return;}
-    button.setAttribute('aria-label',t('Opción {n}: {color}',{n:i+1,color:spoken(p)}));button.setAttribute('aria-pressed',String(selected===i));button.disabled=busy||editing||state.over;
+    button.setAttribute('aria-label',t('Opción {n}: {color}',{n:i+1,color:spoken(p)}));button.setAttribute('aria-pressed',String(selected===i));button.disabled=busy||editing||state.over||removingForRevive;
     const chip=document.createElement('span');chip.className=`chip ${p.color}`;chip.dataset.color=p.color;chip.textContent='';chip.setAttribute('aria-hidden','true');button.append(chip);
     button.addEventListener('click',()=>{if(trayDrag.suppressClick())return;selected=i;renderTray();clearPreview();status.textContent=IS_MAIN?idleMessage():t('{color}: toca un hueco',{color:spoken(p)});});trayEl.append(button);
   });
@@ -158,7 +171,7 @@ function renderTray(){
 }
 function clearPreview(){previewAt=null;previewEl.replaceChildren();cells.forEach(c=>c.classList.remove('will-clear'));}
 function preview(at){
-  if(busy||editing||state.over||state.board[at]||previewAt===at||menu.open||help.open||restartConfirm.open)return;
+  if(busy||editing||removingForRevive||state.over||state.board[at]||previewAt===at||menu.open||help.open||restartConfirm.open)return;
   clearPreview();previewAt=at;const p=state.tray[selected];if(!p)return;
   const result=simulate(state.board,at,p,physics);previewEl.append(tile(p,at,'ghost'));
   result.frames.find(frame=>frame.kind==='clear')?.cleared.forEach(i=>cells[i].classList.add('will-clear'));
@@ -196,6 +209,7 @@ async function animate(result,oldScore,playedId=null,initialBoard=null,lineCheck
 }
 async function place(at){
   if(busy||menu.open||help.open||restartConfirm.open)return;
+  if(removingForRevive){await finishRevive(at);return;}
   if(editing){const brush=lab.getBrush();draft.board[at]=brush.color==='empty'?null:{id:draft.nextId++,color:brush.color};draft.over=false;draft.endReason=null;triggerId=draft.board[at]?.id||null;experiment=structuredClone(draft);renderBoard(draft.board);lab.showStats(draft.board,0,true);return;}
   if(state.over||state.board[at])return;
   experiment=null;const oldScore=state.score,playedId=state.tray[selected].id,result=playTurn(state,at,selected,IS_EFFECTS&&demoKind==='escape'?()=>.5:Math.random,physics);
@@ -203,7 +217,7 @@ async function place(at){
   if(!state.tray[selected]||result.newRound)selected=state.tray.findIndex(Boolean);await animate(result,oldScore,playedId,null,lineCheck);
 }
 const trayDrag=installTrayDrag({tray:trayEl,board:boardEl,
-  canStart:option=>!busy&&!editing&&!state.over&&!menu.open&&!help.open&&!restartConfirm.open&&!!state.tray[option],
+  canStart:option=>!busy&&!editing&&!removingForRevive&&!state.over&&!menu.open&&!help.open&&!restartConfirm.open&&!!state.tray[option],
   onSelect:option=>{selected=option;clearPreview();haptics.prepare();for(const button of trayEl.children)button.setAttribute('aria-pressed',String(Number(button.dataset.option)===option));},
   onHover:at=>{clearPreview();if(at!==null){preview(at);haptics.prepare();}},
   onFinish:()=>renderTray(),onDrop:(at,option)=>{selected=option;place(at);}
@@ -230,14 +244,142 @@ function openMenu(over=state.over){
   $('#end-explanation').hidden=!over;$('#end-explanation').textContent=holes?t('Has terminado antes de llenar el tablero.'):t('El tablero está lleno y no quedan líneas.');
   $('#continue').hidden=over;$('#view-board').hidden=!over;$('#menu-close').hidden=over;
   $('#new-game').className=over?'primary':'secondary';if(!menu.open)menu.showModal();
+  refreshRevive();
 }
+async function refreshRevive(){
+  const button=$('#revive'),copy=$('#revive-copy'),current=state;
+  button.hidden=true;copy.hidden=true;
+  renderMembership();
+  if(!IS_MAIN||!state.over||reviveStatus(state)!=='available')return;
+  if(ads.supported('rewarded')){
+    if(state!==current||!state.over||!menu.open)return;
+    button.hidden=false;copy.hidden=false;
+  }
+}
+function selectReviveTile(kind='revive'){
+  removalKind=kind;
+  removingForRevive=true;menu.close();clearPreview();
+  renderBoard(state.board);renderTray();status.textContent=t('Elige un bloque del tablero para eliminarlo.');
+}
+async function finishRevive(at){
+  if(!state.board[at])return;
+  state=removalKind==='remove'?removeForCredit(state,at):removeForRevive(state,at);removingForRevive=false;persist();
+  busy=true;renderBoard(state.board);renderTray();$('#pause').disabled=true;
+  state=applyLineCheck(state,await checkLines(state,physics));persist();busy=false;
+  renderBoard(state.board);renderTray();$('#pause').disabled=false;
+  status.textContent=t('Bloque eliminado. Puedes continuar.');
+  if(state.over)openMenu(true);
+}
+$('#revive').addEventListener('click',async()=>{
+  if(busy||!IS_MAIN||!state.over||reviveStatus(state)!=='available')return;
+  const current=state;
+  if(!await ads.ready('rewarded')||state!==current||busy){$('#menu-copy').textContent=t('Ahora no hay vídeos disponibles. Inténtalo más tarde.');return;}
+  state=beginRevive(state);persist();busy=true;
+  for(const id of ['#revive','#new-game','#view-board','#menu-help'])$(id).disabled=true;
+  const result=await ads.show('rewarded',()=>{state=settleRevive(state,{shown:true,earned:true});persist();});
+  if(result.shown)adCadence.noteFullscreen();
+  state=settleRevive(state,result);persist();busy=false;
+  for(const id of ['#revive','#new-game','#view-board','#menu-help'])$(id).disabled=false;
+  if(reviveStatus(state)==='earned')selectReviveTile();
+  else {$('#menu-copy').textContent=t('No se ha completado el anuncio.');refreshRevive();}
+});
+const membership=$('#membership');
+function renderMembership(){
+  const member=subscriptions.snapshot(),credit=$('#credit-removal');
+  $('#membership-open').hidden=!IS_MAIN;
+  $('#membership-upgrade').hidden=!IS_MAIN||!member.active||member.unlimited||member.balance>0||reviveStatus(state)!=='available';
+  const retry=blockRemovalStatus(state)==='pending';
+  credit.hidden=!IS_MAIN||(state.over&&!retry)||!(retry||blockRemovalStatus(state)==='available'&&(member.balance>0||member.unlimited)&&state.board.some(Boolean));
+  const paidRetry=reviveStatus(state)==='pending'&&state.reviveSource==='paid';
+  $('#paid-revive').hidden=!IS_MAIN||!state.over||!(paidRetry||reviveStatus(state)==='available'&&(member.unlimitedRevives||member.revivesRemaining>0));
+  $('#paid-revive').textContent=t(paidRetry?'Recuperar revivir pendiente':'Revivir · incluido en tu plan');
+  credit.textContent=t(retry?'Recuperar bloque pendiente':'Eliminar un bloque');
+  $('#membership-balance').hidden=!subscriptions.enabled();
+  $('#membership-balance').textContent=member.unlimited?t('Eliminar un bloque por partida · ilimitado'):t('Bloques que puedes eliminar: {n}',{n:member.balance});
+  $('#membership-revives').hidden=!subscriptions.enabled();
+  $('#membership-revives').textContent=member.unlimitedRevives?t('Un revivir incluido por partida'):t('Revivires incluidos disponibles hoy: {n}',{n:member.revivesRemaining});
+  $('#membership-state').textContent=t(!subscriptions.enabled()?'Próximamente. Todavía no se puede comprar.':!member.available?'No se pudo conectar con la tienda. Inténtalo de nuevo.':member.active?'Suscripción activa · sin anuncios automáticos':'Elige tu suscripción');
+  const plans=$('#membership-plans');plans.replaceChildren();
+  if(!subscriptions.enabled())for(const plan of MONTHLY_PLAN_PREVIEW){
+    const card=document.createElement('div');card.className='membership-plan';
+    const price=document.createElement('strong'),allowance=document.createElement('span');
+    price.textContent=t('{price}/mes',{price:new Intl.NumberFormat(document.documentElement.lang,{style:'currency',currency:'EUR'}).format(plan.priceCents/100)});
+    allowance.textContent=planBenefit(plan);
+    card.append(price,allowance);plans.append(card);
+  }
+  for(const plan of member.products){
+    const button=document.createElement('button');button.className='secondary';button.type='button';
+    button.textContent=`${plan.name} · ${t('{price}/mes',{price:plan.price})} · ${planBenefit(MONTHLY_PLAN_PREVIEW.find(p=>p.productId===plan.id)||plan)}`;
+    button.disabled=!member.available;button.addEventListener('click',()=>membershipAction(()=>subscriptions.purchase(plan.id)));plans.append(button);
+  }
+  $('#membership-restore').disabled=!subscriptions.enabled();$('#membership-manage').disabled=!subscriptions.enabled();
+  $('#membership-terms').hidden=!member.products.length;
+}
+function planBenefit(plan){
+  const blocks=plan.unlimited?t('Elimina un bloque por partida'):t('Elimina hasta {n} bloques al mes',{n:plan.monthlyRemovals});
+  const revive=plan.dailyRevives===null?t('Un revivir por partida'):plan.dailyRevives===1?t('Un revivir al día'):plan.dailyRevives?t('{n} revivires al día',{n:plan.dailyRevives}):t('Sin revivires incluidos');
+  return `${blocks} · ${revive}`;
+}
+async function syncMembership(){
+  await subscriptions.refresh();renderMembership();
+  if(IS_MAIN&&ADS_CONFIG.banner)await ads.banner(!subscriptions.suppressAutomaticAds());
+}
+async function membershipAction(action){
+  for(const button of membership.querySelectorAll('button'))button.disabled=true;
+  const result=await action();await syncMembership();
+  $('#membership-close').disabled=false;
+  if(!result.ok)$('#membership-state').textContent=t(result.reason==='pending'?'Compra pendiente de aprobación.':result.reason==='cancelled'?'Compra cancelada.':'No se pudo completar. Inténtalo de nuevo.');
+  if(menu.open)refreshRevive();
+}
+const openMembership=async()=>{renderMembership();membership.showModal();await syncMembership();};
+$('#membership-open').addEventListener('click',openMembership);
+$('#membership-upgrade').addEventListener('click',openMembership);
+$('#membership-close').addEventListener('click',()=>membership.close());
+$('#membership-restore').addEventListener('click',()=>membershipAction(()=>subscriptions.restore()));
+$('#membership-manage').addEventListener('click',()=>membershipAction(()=>subscriptions.manage()));
+addEventListener('imanto-subscription-changed',()=>syncMembership());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&IS_MAIN)syncMembership();});
+$('#credit-removal').addEventListener('click',async()=>{
+  if(busy||!IS_MAIN)return;
+  if(blockRemovalStatus(state)==='available')state=beginCreditRemoval(state);
+  if(blockRemovalStatus(state)!=='pending')return;
+  persist();busy=true;
+  for(const id of ['#credit-removal','#revive','#new-game','#view-board','#continue','#menu-close','#membership-open'])$(id).disabled=true;
+  const claim=await subscriptions.claim(state.gameId);
+  state=settleCreditRemoval(state,claim);persist();busy=false;
+  for(const id of ['#credit-removal','#revive','#new-game','#view-board','#continue','#menu-close','#membership-open'])$(id).disabled=false;
+  if(blockRemovalStatus(state)==='earned')selectReviveTile('remove');
+  else {$('#menu-copy').textContent=t(claim.denied?'No te quedan bloques para eliminar con tu saldo. Puedes cambiar de plan.':'Ayuda pendiente de confirmar. Vuelve a intentarlo para recuperarla.');refreshRevive();}
+});
+$('#paid-revive').addEventListener('click',async()=>{
+  if(busy||!IS_MAIN||!state.over)return;
+  if(reviveStatus(state)==='available')state=beginPaidRevive(state);
+  if(reviveStatus(state)!=='pending'||state.reviveSource!=='paid')return;
+  persist();busy=true;
+  for(const button of menu.querySelectorAll('button'))button.disabled=true;
+  const result=await subscriptions.claim(state.gameId,'revive');
+  state=settlePaidRevive(state,result);persist();busy=false;
+  for(const button of menu.querySelectorAll('button'))button.disabled=false;
+  if(reviveStatus(state)==='earned')selectReviveTile();else refreshRevive();
+});
 $('#pause').addEventListener('click',()=>openMenu());$('#continue').addEventListener('click',()=>menu.close());menu.addEventListener('cancel',e=>{if(state.over)e.preventDefault();});
 $('#menu-close').addEventListener('click',()=>menu.close());
-$('#view-board').addEventListener('click',()=>{menu.close();status.textContent=t('Partida terminada · no quedan líneas posibles');});
-function restartGame(){
+$('#view-board').addEventListener('click',()=>{if(reviveStatus(state)==='earned'){selectReviveTile();return;}menu.close();status.textContent=t('Partida terminada · no quedan líneas posibles');});
+async function restartGame(){
+  if(busy)return;
   if(restartConfirm.open)restartConfirm.close();
   if(IS_EFFECTS){menu.close();prepareDemo();return;}
+  if(IS_MAIN&&state.over){
+    identifyGame();adCadence.finish(state.gameId);
+    if(adCadence.due()){
+      busy=true;$('#new-game').disabled=true;
+      const result=await ads.ready('interstitial')?await ads.show('interstitial'):{shown:false};
+      if(result.shown)adCadence.shown();
+      busy=false;$('#new-game').disabled=false;
+    }
+  }
   celebration.finish();state=VARIANT?loadComparison(variantId,storage,Math.random,{restart:true}):createGame(Math.random,physics);
+  identifyGame();removingForRevive=false;
   clearTimeout(statusTimer);selected=0;editing=false;draft=null;experiment=null;triggerId=null;lab?.setEditing(false);persist();menu.close();clearPreview();piecesEl.replaceChildren();renderBoard(state.board);renderTray();showScore(0);$('#bonus').classList.remove('show');lab?.showStats(state.board);status.textContent=idleMessage();
 }
 $('#new-game').addEventListener('click',()=>{if(!IS_EFFECTS&&!IS_LAB&&!VARIANT&&!state.over){menu.close();restartConfirm.showModal();return;}restartGame();});
@@ -253,7 +395,9 @@ async function checkInitial(){
   state=applyLineCheck(state,await checkLines(state,physics));persist();busy=false;
   renderBoard(state.board);renderTray();$('#pause').disabled=false;effectRoom?.setBusy(false);setQuickBusy(false);boardEl.setAttribute('aria-busy','false');
   status.textContent=state.over?t('No quedan líneas posibles'):idleMessage();
-  if(state.over)openMenu(true);
+  if(IS_MAIN&&reviveStatus(state)==='earned')selectReviveTile();
+  else if(IS_MAIN&&blockRemovalStatus(state)==='earned')selectReviveTile('remove');
+  else if(state.over)openMenu(true);
   else if(!IS_EFFECTS&&!IS_LAB&&!VARIANT){
     const screen=new URLSearchParams(location.search).get('screen');
     if(screen==='pause')openMenu(false);if(screen==='help')help.showModal();if(screen==='restart')restartConfirm.showModal();
@@ -284,3 +428,4 @@ if(IS_EFFECTS){
   if(!IS_CAPTURE&&Object.hasOwn(DEMOS,effectParam))requestAnimationFrame(()=>requestAnimationFrame(()=>playDemo(demoKind)));
 }
 initializeLanguage();
+if(IS_MAIN)syncMembership();

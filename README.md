@@ -1,18 +1,16 @@
 # Imanto
 
-A warm color puzzle by Krazel Games. English and Spanish. Complete monochrome rows or columns; place one tile to push its orthogonal neighbors once.
+Color puzzle by Krazel Games. Native iOS candidate 0.18 (1), English/Spanish.
+Random openings, combos, persistent score and game. Recorded audio uses AVAudioPlayer.
+Subscriptions use StoreKit 2 and local benefit counters verified with StoreKit. Monthly block
+helpers and included daily revives are separate, each capped at one per game.
+Optional rewarded TEST ads are enabled for the internal beta; banner/interstitial
+remain disabled. No live AdMob inventory or public App Store release.
 
-Native iOS beta 0.15 (1), iPhone/iPad, iOS 16+. Offline WKWebView runtime; recorded music and effects use AVAudioPlayer and playback session. Drag or tap to place tiles. Consecutive scoring moves grow a combo multiplier, renewed through the current and following hand. The HUD shows score, personal best and combo. Optional UIKit haptics for placement, lines, combos and all-clear, with a separate saved toggle on supported iPhones. No accounts, ads, analytics or purchases.
-
-## Build
-
-`npm ci`, `npm test`, `npm run build:ios`, then `cd ios && xcodegen generate`. Open Imanto.xcodeproj. The manual release workflow runs native simulator tests before signing; signing and Apple upload secrets are restricted to the main-only production environment. Standard public macOS runner; one-day artifact retention, no cache.
-
-## Rights and sources
-
-Game code/art: copyright Krazel Studio. Public source visibility does not grant a separate license. Recorded button/place/move/line sounds: Kenney, CC0. “Carefree” Kevin MacLeod (incompetech.com), CC BY 4.0: https://creativecommons.org/licenses/by/4.0/ . Original audio and credits in web/audio and ios/Audio. Three OGG effects are decoded to PCM WAV for AVAudioPlayer without changing rate, channels or level.
-
+Build: npm ci; npm test; npm run build:ios; cd ios; xcodegen generate --spec project.ads.yml.
+Protected owner-only workflow performs iPhone/iPad native QA before signing/upload.
 Support: https://krazel.github.io/imanto/support/
 Privacy: https://krazel.github.io/imanto/privacy/
 
-TestFlight beta only. App Store and itch.io listings remain drafts. Physical-device haptics, audio, silent-switch and text-gesture QA is pending user testing.
+Recorded effects: Kenney, CC0. Optional music: Carefree, Kevin MacLeod,
+CC BY 4.0, attribution and links inside the game. Copyright Krazel Studio.
