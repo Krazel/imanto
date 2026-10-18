@@ -3,8 +3,8 @@ import WebKit
 
 // Independent native gate: changing JavaScript or a URL cannot activate ads.
 struct AdConfiguration {
-    let banner = false
-    let interstitial = false
+    let banner = true
+    let interstitial = true
     #if DEBUG || IMANTO_TESTFLIGHT
     let rewarded = true
     #else
@@ -22,27 +22,28 @@ struct AdConfiguration {
     }
 }
 
+@MainActor protocol NativeAdProviding: AnyObject {
+    func ready(_ kind: String, completion: @escaping (Bool) -> Void)
+    func available(_ kind: String) -> Bool
+    func show(_ kind: String, onShown: @escaping () -> Void, onEarned: @escaping () -> Void, completion: @escaping (Bool, Bool) -> Void)
+    func setBanner(_ visible: Bool, completion: @escaping (Bool) -> Void)
+    func privacy(_ completion: @escaping (Bool) -> Void)
+    func updateLayout()
+}
+extension NativeAdProviding { func updateLayout() {} }
 @MainActor final class NativeAds {
     weak var owner: GameController?
     let config = AdConfiguration()
-    #if canImport(GoogleMobileAds) && canImport(UserMessagingPlatform)
-    private lazy var provider = GoogleAdProvider(owner: owner)
-    #endif
-    init(owner: GameController) { self.owner = owner }
-    func hideBanner() {
+    var provider: NativeAdProviding?
+    init(owner: GameController) {
+        self.owner = owner
         #if canImport(GoogleMobileAds) && canImport(UserMessagingPlatform)
-        provider.setBanner(false, completion: { _ in })
+        provider = GoogleAdProvider(owner: owner)
         #endif
-        owner?.reserveBannerHeight(0)
     }
+    func updateLayout() { provider?.updateLayout() }
+    func hideBanner() { provider?.setBanner(false, completion: { _ in }); owner?.reserveBannerHeight(0) }
     func receive(_ body: [String: Any]) {
-        Task { [weak self] in
-            guard let self = self else { return }
-            await self.owner?.subscriptions.refresh()
-            self.receiveResolved(body)
-        }
-    }
-    private func receiveResolved(_ body: [String: Any]) {
         guard let id = body["requestId"] as? String, id.count < 100,
               let kind = body["kind"] as? String, let action = body["action"] as? String else { return }
         let reply: ([String: Any]) -> Void = { [weak self] values in
@@ -51,23 +52,22 @@ struct AdConfiguration {
                   let json = String(data: data, encoding: .utf8) else { return }
             self?.owner?.web.evaluateJavaScript("window.dispatchEvent(new CustomEvent('imanto-ad-result',{detail:\(json)}))", completionHandler: nil)
         }
+        // Entitlements are resolved on launch/foreground and Transaction.updates.
+        // Cached availability must never wait for a network request between games.
         if (kind == "banner" || kind == "interstitial"), owner?.subscriptions.suppressAutomaticAds == true {
             hideBanner(); reply(["ready": false, "shown": false, "earned": false]); return
         }
-        guard config.enabled(kind), UIApplication.shared.applicationState == .active else {
+        guard config.enabled(kind), UIApplication.shared.applicationState == .active, let provider = provider else {
             reply(["ready": false, "shown": false, "earned": false]); return
         }
-        #if canImport(GoogleMobileAds) && canImport(UserMessagingPlatform)
         switch action {
         case "ready": provider.ready(kind, completion: { reply(["ready": $0]) })
-        case "show": provider.show(kind, onEarned: { reply(["phase": "earned", "shown": true, "earned": true]) }, completion: { shown, earned in reply(["shown": shown, "earned": earned]) })
+        case "available": reply(["ready": provider.available(kind)])
+        case "show": provider.show(kind, onShown: { reply(["phase": "shown", "shown": true]) }, onEarned: { reply(["phase": "earned", "shown": true, "earned": true]) }, completion: { shown, earned in reply(["shown": shown, "earned": earned]) })
         case "banner": provider.setBanner(body["visible"] as? Bool == true, completion: { reply(["shown": $0]) })
         case "privacy": provider.privacy { reply(["complete": $0]) }
         default: reply(["ready": false, "shown": false, "earned": false])
         }
-        #else
-        reply(["ready": false, "shown": false, "earned": false])
-        #endif
     }
 }
 
@@ -75,8 +75,20 @@ struct AdConfiguration {
 import GoogleMobileAds
 import UserMessagingPlatform
 
-// Included only by project.ads.yml. Official Google test inventory, never live IDs.
-@MainActor final class GoogleAdProvider: NSObject, FullScreenContentDelegate, BannerViewDelegate {
+// Real units are provisioned in AdMob. Beta always uses official Google demo inventory.
+// Commercial rollout remains gated off until an App Store release is authorized.
+struct AdUnitIDs {
+    #if DEBUG || IMANTO_TESTFLIGHT
+    static let banner = "ca-app-pub-3940256099942544/2435281174"
+    static let interstitial = "ca-app-pub-3940256099942544/4411468910"
+    static let rewarded = "ca-app-pub-3940256099942544/1712485313"
+    #else
+    static let banner = "ca-app-pub-3425091654264901/9778431363"
+    static let interstitial = "ca-app-pub-3425091654264901/8321704454"
+    static let rewarded = "ca-app-pub-3425091654264901/9990929215"
+    #endif
+}
+@MainActor final class GoogleAdProvider: NSObject, NativeAdProviding, FullScreenContentDelegate, BannerViewDelegate {
     weak var owner: GameController?
     private var started = false
     private var preparing = false
@@ -84,6 +96,11 @@ import UserMessagingPlatform
     private var rewarded: RewardedAd?
     private var loadedAt: [String: Date] = [:]
     private var banner: BannerView?
+    private var bannerWanted = false
+    private var bannerWidth: CGFloat = 0
+    private var consentGeneration = 0
+    private var onShown: (() -> Void)?
+    private var loading = Set<String>()
     private var bannerCompletion: ((Bool) -> Void)?
     private var fullscreenCompletion: ((Bool, Bool) -> Void)?
     private var onEarned: (() -> Void)?
@@ -111,40 +128,57 @@ import UserMessagingPlatform
         request.register(extras); return request
     }
     func privacy(_ completion: @escaping (Bool) -> Void) {
-        guard let owner = owner, started, fullscreenCompletion == nil else { completion(false); return }
+        guard let owner = owner, fullscreenCompletion == nil, !preparing else { completion(false); return }
+        if !started { prepare(completion); return }
+        consentGeneration += 1
         interstitial = nil; rewarded = nil; loadedAt.removeAll()
-        banner?.removeFromSuperview(); banner = nil; owner.reserveBannerHeight(0)
+        setBanner(false, completion: { _ in })
         guard ConsentInformation.shared.privacyOptionsRequirementStatus == .required else { completion(true); return }
         ConsentForm.presentPrivacyOptionsForm(from: owner) { error in completion(error == nil) }
     }
+    func available(_ kind: String) -> Bool {
+        guard ConsentInformation.shared.canRequestAds, fullscreenCompletion == nil,
+              let date = loadedAt[kind], Date().timeIntervalSince(date) < 3500 else { return false }
+        return kind == "interstitial" ? interstitial != nil : kind == "rewarded" && rewarded != nil
+    }
     func ready(_ kind: String, completion: @escaping (Bool) -> Void) {
+        guard !loading.contains(kind) else { completion(false); return }
+        loading.insert(kind)
         prepare { [weak self] allowed in
-            guard let self = self, allowed, self.fullscreenCompletion == nil else { completion(false); return }
+            guard let self = self else { completion(false); return }
+            guard allowed, self.fullscreenCompletion == nil else { self.loading.remove(kind); completion(false); return }
             if let date = self.loadedAt[kind], Date().timeIntervalSince(date) > 3500 {
                 if kind == "interstitial" { self.interstitial = nil } else { self.rewarded = nil }
             }
+            let generation = self.consentGeneration
             if kind == "interstitial" {
-                if self.interstitial != nil { completion(true); return }
-                InterstitialAd.load(with: "ca-app-pub-3940256099942544/4411468910", request: self.request()) { [weak self] ad, _ in
-                    self?.interstitial = ad; ad?.fullScreenContentDelegate = self
-                    if ad != nil { self?.loadedAt[kind] = Date() }; completion(ad != nil)
+                if self.interstitial != nil { self.loading.remove(kind); completion(true); return }
+                InterstitialAd.load(with: AdUnitIDs.interstitial, request: self.request()) { [weak self] ad, _ in
+                    guard let self = self else { completion(false); return }
+                    self.loading.remove(kind)
+                    guard generation == self.consentGeneration, ConsentInformation.shared.canRequestAds else { completion(false); return }
+                    self.interstitial = ad; ad?.fullScreenContentDelegate = self
+                    if ad != nil { self.loadedAt[kind] = Date() }; completion(ad != nil)
                 }
             } else if kind == "rewarded" {
-                if self.rewarded != nil { completion(true); return }
-                RewardedAd.load(with: "ca-app-pub-3940256099942544/1712485313", request: self.request()) { [weak self] ad, _ in
-                    self?.rewarded = ad; ad?.fullScreenContentDelegate = self
-                    if ad != nil { self?.loadedAt[kind] = Date() }; completion(ad != nil)
+                if self.rewarded != nil { self.loading.remove(kind); completion(true); return }
+                RewardedAd.load(with: AdUnitIDs.rewarded, request: self.request()) { [weak self] ad, _ in
+                    guard let self = self else { completion(false); return }
+                    self.loading.remove(kind)
+                    guard generation == self.consentGeneration, ConsentInformation.shared.canRequestAds else { completion(false); return }
+                    self.rewarded = ad; ad?.fullScreenContentDelegate = self
+                    if ad != nil { self.loadedAt[kind] = Date() }; completion(ad != nil)
                 }
-            } else { completion(false) }
+            } else { self.loading.remove(kind); completion(false) }
         }
     }
-    func show(_ kind: String, onEarned: @escaping () -> Void, completion: @escaping (Bool, Bool) -> Void) {
+    func show(_ kind: String, onShown: @escaping () -> Void, onEarned: @escaping () -> Void, completion: @escaping (Bool, Bool) -> Void) {
         guard ConsentInformation.shared.canRequestAds, let owner = owner,
               owner.presentedViewController == nil, UIApplication.shared.applicationState == .active,
               fullscreenCompletion == nil else { completion(false, false); return }
         guard let date = loadedAt[kind], Date().timeIntervalSince(date) < 3500 else { completion(false, false); return }
         guard (kind == "rewarded" && rewarded != nil) || (kind == "interstitial" && interstitial != nil) else { completion(false, false); return }
-        fullscreenCompletion = completion; self.onEarned = onEarned; shown = false; earned = false
+        fullscreenCompletion = completion; self.onShown = onShown; self.onEarned = onEarned; shown = false; earned = false
         if kind == "rewarded", let ad = rewarded {
             rewarded = nil
             ad.present(from: owner) { [weak self] in
@@ -153,23 +187,30 @@ import UserMessagingPlatform
             }
         } else if let ad = interstitial { interstitial = nil; ad.present(from: owner) }
     }
-    func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) { shown = true }
+    func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) { shown = true; onShown?(); onShown = nil }
     func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) { finish() }
     func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) { finish() }
     private func finish() {
-        let completion = fullscreenCompletion; fullscreenCompletion = nil; onEarned = nil
+        let completion = fullscreenCompletion; fullscreenCompletion = nil; onShown = nil; onEarned = nil
         completion?(shown, earned)
     }
+    func updateLayout() {
+        guard bannerWanted, banner != nil, let owner = owner,
+              abs(owner.view.safeAreaLayoutGuide.layoutFrame.width - bannerWidth) > 1 else { return }
+        setBanner(false, completion: { _ in }); setBanner(true, completion: { _ in })
+    }
     func setBanner(_ visible: Bool, completion: @escaping (Bool) -> Void) {
+        bannerWanted = visible
         if !visible { banner?.removeFromSuperview(); banner = nil; owner?.reserveBannerHeight(0); bannerCompletion?(false); bannerCompletion = nil; completion(false); return }
         if banner != nil { completion(true); return }
         prepare { [weak self] allowed in
-            guard let self = self, allowed, let owner = self.owner,
+            guard let self = self, allowed, self.bannerWanted, self.banner == nil, let owner = self.owner,
                   !owner.subscriptions.suppressAutomaticAds else { completion(false); return }
             // A compact anchored adaptive banner; safe-area space is reserved only after load.
-            let size = currentOrientationAnchoredAdaptiveBanner(width: owner.view.safeAreaLayoutGuide.layoutFrame.width)
+            self.bannerWidth = owner.view.safeAreaLayoutGuide.layoutFrame.width
+            let size = currentOrientationAnchoredAdaptiveBanner(width: self.bannerWidth)
             let banner = BannerView(adSize: size)
-            banner.adUnitID = "ca-app-pub-3940256099942544/2934735716"
+            banner.adUnitID = AdUnitIDs.banner
             banner.rootViewController = owner; banner.delegate = self
             self.banner = banner; self.bannerCompletion = completion
             banner.translatesAutoresizingMaskIntoConstraints = false; banner.isHidden = true; owner.view.addSubview(banner)
@@ -178,14 +219,16 @@ import UserMessagingPlatform
         }
     }
     func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-        guard bannerView === banner, owner?.subscriptions.suppressAutomaticAds != true else {
-            bannerView.removeFromSuperview(); owner?.reserveBannerHeight(0); bannerCompletion?(false); bannerCompletion = nil; return
+        guard bannerView === banner else { bannerView.removeFromSuperview(); return }
+        guard bannerWanted, owner?.subscriptions.suppressAutomaticAds != true else {
+            setBanner(false, completion: { _ in }); return
         }
         bannerView.isHidden = false; owner?.reserveBannerHeight(bannerView.adSize.size.height)
         bannerCompletion?(true); bannerCompletion = nil
     }
     func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
-        bannerView.isHidden = true; owner?.reserveBannerHeight(0)
+        guard bannerView === banner else { return }
+        bannerView.removeFromSuperview(); banner = nil; owner?.reserveBannerHeight(0)
         bannerCompletion?(false); bannerCompletion = nil
     }
 }

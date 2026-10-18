@@ -1,0 +1,95 @@
+import XCTest
+import UIKit
+import WebKit
+@testable import Imanto
+
+// Deterministic transport/layout checks. No Google traffic or invented StoreKit entitlement.
+@MainActor private final class AdFixture: NativeAdProviding {
+    weak var owner: GameController?
+    var banner: UIView?
+    var presentations: [String] = []
+    init(_ owner: GameController) { self.owner = owner }
+    func ready(_ kind: String, completion: @escaping (Bool) -> Void) { completion(true) }
+    func available(_ kind: String) -> Bool { true }
+    func privacy(_ completion: @escaping (Bool) -> Void) { completion(true) }
+    func setBanner(_ visible: Bool, completion: @escaping (Bool) -> Void) {
+        banner?.removeFromSuperview(); banner = nil
+        guard visible, let owner = owner else { owner?.reserveBannerHeight(0); completion(false); return }
+        let view = UIView(); view.backgroundColor = .systemTeal; view.translatesAutoresizingMaskIntoConstraints = false
+        let label = UILabel(); label.text = "TEST · BANNER"; label.textColor = .white; label.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(label); owner.view.addSubview(view); banner = view
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: owner.view.safeAreaLayoutGuide.leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: owner.view.safeAreaLayoutGuide.trailingAnchor),
+            view.bottomAnchor.constraint(equalTo: owner.view.safeAreaLayoutGuide.bottomAnchor), view.heightAnchor.constraint(equalToConstant: 50),
+            label.centerXAnchor.constraint(equalTo: view.centerXAnchor), label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+        owner.reserveBannerHeight(50); completion(true)
+    }
+    func show(_ kind: String, onShown: @escaping () -> Void, onEarned: @escaping () -> Void, completion: @escaping (Bool, Bool) -> Void) {
+        guard let owner = owner, owner.presentedViewController == nil else { completion(false, false); return }
+        let page = UIViewController(); page.view.backgroundColor = .systemTeal; page.modalPresentationStyle = .fullScreen
+        presentations.append(kind)
+        owner.present(page, animated: false) {
+            onShown()
+            if kind == "rewarded" { onEarned() }
+            page.dismiss(animated: false) { completion(true, kind == "rewarded") }
+        }
+    }
+}
+
+@MainActor final class AdsIntegrationTests: XCTestCase {
+    private func controller() async throws -> GameController {
+        let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
+        for _ in 0..<600 {
+            if controller.navigationReady {
+                await controller.subscriptions.refresh()
+                if !controller.subscriptions.suppressAutomaticAds { return controller }
+            }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        XCTFail("Game did not load"); return controller
+    }
+    private func send(_ web: WKWebView, action: String, kind: String, id: String, visible: Bool = false) async throws -> [[String: Any]] {
+        _ = try await web.evaluateJavaScript("window.imantoAdQA=[];window.imantoAdQAListener=e=>window.imantoAdQA.push(e.detail);window.addEventListener('imanto-ad-result',window.imantoAdQAListener);window.webkit.messageHandlers.imantoAds.postMessage({action:'\(action)',kind:'\(kind)',requestId:'\(id)',visible:\(visible)});true")
+        for _ in 0..<300 {
+            let done = try await web.evaluateJavaScript("window.imantoAdQA.some(r=>r.requestId==='\(id)'&&!r.phase)") as? Bool
+            if done == true { break }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        let json = try await web.evaluateJavaScript("window.removeEventListener('imanto-ad-result',window.imantoAdQAListener);JSON.stringify(window.imantoAdQA)") as! String
+        return try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [[String: Any]]
+    }
+    func testBannerReservesSafeAreaAndHidingRestoresTheBoard() async throws {
+        let owner = try await controller(), original = owner.ads.provider, fixture = AdFixture(owner)
+        owner.ads.provider = fixture
+        defer { fixture.setBanner(false, completion: { _ in }); owner.ads.provider = original }
+        let results = try await send(owner.web, action: "banner", kind: "banner", id: "qa-banner", visible: true)
+        XCTAssertEqual(results.last?["shown"] as? Bool, true)
+        let banner = try XCTUnwrap(fixture.banner)
+        XCTAssertEqual(owner.web.frame.maxY, banner.frame.minY, accuracy: 1)
+        XCTAssertEqual(banner.frame.maxY, owner.view.safeAreaLayoutGuide.layoutFrame.maxY, accuracy: 1)
+        let renderer = UIGraphicsImageRenderer(bounds: owner.view.bounds)
+        let image = renderer.image { _ in owner.view.drawHierarchy(in: owner.view.bounds, afterScreenUpdates: true) }
+        try XCTUnwrap(image.pngData()).write(to: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("imanto-ads-qa.png"))
+        _ = try await send(owner.web, action: "banner", kind: "banner", id: "qa-hide")
+        XCTAssertNil(fixture.banner)
+        XCTAssertEqual(owner.web.frame.maxY, owner.view.safeAreaLayoutGuide.layoutFrame.maxY, accuracy: 1)
+    }
+    func testFullscreenBridgeSeparatesPresentationRewardAndDismissal() async throws {
+        let owner = try await controller(), original = owner.ads.provider, fixture = AdFixture(owner)
+        owner.ads.provider = fixture
+        defer { owner.ads.provider = original }
+        for kind in ["interstitial", "rewarded"] {
+            let available = try await send(owner.web, action: "available", kind: kind, id: "qa-cache-\(kind)")
+            XCTAssertEqual(available.last?["ready"] as? Bool, true)
+            let results = try await send(owner.web, action: "show", kind: kind, id: "qa-show-\(kind)")
+            XCTAssertEqual(results.first?["phase"] as? String, "shown")
+            XCTAssertEqual(results.filter { $0["phase"] as? String == "earned" }.count, kind == "rewarded" ? 1 : 0)
+            XCTAssertEqual(results.last?["shown"] as? Bool, true)
+            XCTAssertEqual(results.last?["earned"] as? Bool, kind == "rewarded")
+            XCTAssertNil(owner.presentedViewController)
+        }
+        XCTAssertEqual(fixture.presentations, ["interstitial", "rewarded"])
+    }
+}

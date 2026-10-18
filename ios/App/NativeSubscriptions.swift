@@ -104,7 +104,7 @@ struct MembershipClaim { let gameID: String; let receipt: String }
                   plan.valid else { return nil }
             return ["id": product.id, "name": product.displayName, "price": product.displayPrice, "monthlyRemovals": plan.monthlyRemovals ?? 0, "unlimited": plan.unlimited, "dailyRevives": plan.dailyRevives ?? -1]
         }
-        return ["available": config.enabled && resolved && walletReady && !catalogue.isEmpty,
+        return ["resolved": resolved, "available": config.enabled && resolved && walletReady && !catalogue.isEmpty,
                 "active": active, "unlimited": active && unlimited, "balance": balance, "revivesRemaining": revivesRemaining, "unlimitedRevives": active && unlimited && walletReady, "products": catalogue]
     }
     private func emit(_ values: [String: Any], event: String) {

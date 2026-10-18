@@ -7,7 +7,7 @@ import {createGame,beginCreditRemoval,settleCreditRemoval,removeForRevive,beginR
 import {newWallet,walletBalance,grantVerifiedCycle,revokeGrant,claimRemoval} from '../server/subscription-ledger.mjs';
 // Arbitrary fixtures, NOT commercial levels or release configuration.
 const config={enabled:true,plans:[{productId:'test.product'}]};
-const status=(extra={})=>({available:true,active:true,balance:2,products:[{id:'test.product',name:'Fixture',price:'localized',monthlyRemovals:7}],...extra});
+const status=(extra={})=>({resolved:true,available:true,active:true,balance:2,products:[{id:'test.product',name:'Fixture',price:'localized',monthlyRemovals:7}],...extra});
 const grant=(wallet,transactionId='transaction',cycleId='billing-cycle',quota=7)=>grantVerifiedCycle(wallet,{transactionId,cycleId,quota});
 
 test('disabled subscriptions make no purchase, restore, wallet or store request',async()=>{
@@ -139,4 +139,12 @@ test('unlimited claims need no credit, preserve banked credits and remain idempo
   wallet=claimRemoval(wallet,'another-game','next',{unlimited:true}).wallet;assert.equal(walletBalance(wallet),2);
   wallet=claimRemoval(wallet,'after-expiry','finite').wallet;assert.equal(walletBalance(wallet),1);
   assert.equal(claimRemoval(newWallet(),'expired','no-credit').claim,null);
+});
+
+test('resolved free entitlement allows ads even when the purchase catalogue is unavailable',async()=>{
+  let answer=status({available:false,active:false,products:[]});
+  const member=createSubscriptions({config,provider:{status:()=>answer}});
+  assert.equal(member.suppressAutomaticAds(),true);await member.refresh();assert.equal(member.suppressAutomaticAds(),false);
+  answer=status({available:false,active:true,products:[]});await member.refresh();assert.equal(member.suppressAutomaticAds(),true);
+  answer=status({resolved:false,active:false});await member.refresh();assert.equal(member.suppressAutomaticAds(),true);
 });

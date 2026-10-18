@@ -72,6 +72,7 @@ final class GameController: UIViewController, WKNavigationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(resume), name: UIApplication.didBecomeActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(interrupted), name: AVAudioSession.interruptionNotification, object: nil)
     }
+    override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); ads?.updateLayout() }
     func receive(_ message: WKScriptMessage) {
         #if DEBUG
         if message.name == "imantoDiagnostics", let error = message.body as? String { scriptErrors.append(error); NSLog("Imanto bundled script: %@", error); return }

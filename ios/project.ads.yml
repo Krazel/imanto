@@ -1,5 +1,5 @@
 # Optional native QA configuration. Ordinary project.yml remains SDK-free.
-# Both runtime gates remain OFF even when this target is compiled.
+# TestFlight enables test inventory; commercial serving remains gated off.
 include:
   - project.yml
 packages:

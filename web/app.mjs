@@ -101,7 +101,7 @@ const subscriptions=createSubscriptions({provider:createNativeSubscriptionProvid
 const ads=createAds({provider:createNativeAdProvider(),suppressAutomatic:subscriptions.suppressAutomaticAds});
 const adCadence=createAdCadence(storage);
 $('#ad-privacy').hidden=!IS_MAIN||!['banner','interstitial','rewarded'].some(ads.supported);
-$('#ad-privacy').addEventListener('click',()=>ads.privacy());
+$('#ad-privacy').addEventListener('click',async()=>{await ads.privacy();await syncAutomaticAds();});
 const personalBest=createPersonalBest(storage);
 if(IS_EFFECTS)state=effectParam==='1'?restoreGame(readSave(SAVE))||effectScene(demoKind).state:effectScene(demoKind).state;
 else if(VARIANT)state=loadComparison(variantId,storage);
@@ -281,8 +281,7 @@ $('#revive').addEventListener('click',async()=>{
   if(!await ads.ready('rewarded')||state!==current||busy){$('#menu-copy').textContent=t('Ahora no hay vídeos disponibles. Inténtalo más tarde.');return;}
   state=beginRevive(state);persist();busy=true;
   for(const id of ['#revive','#new-game','#view-board','#menu-help'])$(id).disabled=true;
-  const result=await ads.show('rewarded',()=>{state=settleRevive(state,{shown:true,earned:true});persist();});
-  if(result.shown)adCadence.noteFullscreen();
+  const result=await ads.show('rewarded',()=>{state=settleRevive(state,{shown:true,earned:true});persist();},()=>adCadence.noteFullscreen());
   state=settleRevive(state,result);persist();busy=false;
   for(const id of ['#revive','#new-game','#view-board','#menu-help'])$(id).disabled=false;
   if(reviveStatus(state)==='earned')selectReviveTile();
@@ -325,9 +324,18 @@ function planBenefit(plan){
   const revive=plan.dailyRevives===null?t('Un revivir por partida'):plan.dailyRevives===1?t('Un revivir al día'):plan.dailyRevives?t('{n} revivires al día',{n:plan.dailyRevives}):t('Sin revivires incluidos');
   return `${blocks} · ${revive}`;
 }
+let preloadingInterstitial=false;
+async function syncAutomaticAds(){
+  if(!IS_MAIN)return;
+  await ads.banner(adCadence.bannerAllowed()&&!subscriptions.suppressAutomaticAds());
+  if(adCadence.canPreload()&&!preloadingInterstitial){
+    preloadingInterstitial=true;
+    try{await ads.ready('interstitial');}finally{preloadingInterstitial=false;}
+  }
+}
 async function syncMembership(){
   await subscriptions.refresh();renderMembership();
-  if(IS_MAIN&&ADS_CONFIG.banner)await ads.banner(!subscriptions.suppressAutomaticAds());
+  await syncAutomaticAds();
 }
 async function membershipAction(action){
   for(const button of membership.querySelectorAll('button'))button.disabled=true;
@@ -378,14 +386,14 @@ async function restartGame(){
     identifyGame();adCadence.finish(state.gameId);
     if(adCadence.due()){
       busy=true;$('#new-game').disabled=true;
-      const result=await ads.ready('interstitial')?await ads.show('interstitial'):{shown:false};
-      if(result.shown)adCadence.shown();
+      if(await ads.available('interstitial'))await ads.show('interstitial',undefined,()=>adCadence.shown());
       busy=false;$('#new-game').disabled=false;
     }
   }
   celebration.finish();state=VARIANT?loadComparison(variantId,storage,Math.random,{restart:true}):createGame(Math.random,physics);
   identifyGame();removingForRevive=false;
   clearTimeout(statusTimer);selected=0;editing=false;draft=null;experiment=null;triggerId=null;lab?.setEditing(false);persist();menu.close();clearPreview();piecesEl.replaceChildren();renderBoard(state.board);renderTray();showScore(0);$('#bonus').classList.remove('show');lab?.showStats(state.board);status.textContent=idleMessage();
+  if(IS_MAIN)void syncAutomaticAds();
 }
 $('#new-game').addEventListener('click',()=>{if(!IS_EFFECTS&&!IS_LAB&&!VARIANT&&!state.over){menu.close();restartConfirm.showModal();return;}restartGame();});
 $('#restart-yes').addEventListener('click',restartGame);

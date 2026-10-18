@@ -17,6 +17,7 @@ for(const kind of ['iPhone','iPad']){
  if(!fs.existsSync(snapshot))throw Error('Missing verified in-game WKWebView snapshot');
  fs.copyFileSync(snapshot,`artifacts/qa/${kind}.png`);
  const membership=container+'/Documents/imanto-subscription-qa.png';if(fs.existsSync(membership))fs.copyFileSync(membership,`artifacts/qa/${kind}-subscription.png`);
+ const ads=container+'/Documents/imanto-ads-qa.png';if(fs.existsSync(ads))fs.copyFileSync(ads,`artifacts/qa/${kind}-ads-layout.png`);
  const app='artifacts/DerivedData/Build/Products/Debug-iphonesimulator/Imanto.app';
  run('xcrun',['simctl','install',d.udid,app]);
  run('xcrun',['simctl','launch',d.udid,'com.krazel.imanto']);
