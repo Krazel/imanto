@@ -30,6 +30,7 @@ dialog .screen-link>i[data-icon]{margin:0;width:25px;height:25px}
 #menu[data-mode=over] .block-mark,#menu[data-mode=over] .eyebrow,#menu[data-mode=over] .menu-navigation{display:none}
 #menu[data-mode=over] .dialog-content{padding-top:32px}
 #menu[data-mode=over] h2{font-size:28px}
+#menu[data-mode=over] .menu-stats>div{background:#f5e9d7;border-radius:17px;padding:13px 17px}
 #menu[data-mode=over] .score-card{align-items:center;text-align:center;padding:18px}
 #menu[data-mode=over] #menu-score{font-size:42px}
 #menu[data-mode=over] #menu-score[data-long=true]{font-size:24px}
