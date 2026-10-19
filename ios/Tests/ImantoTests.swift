@@ -101,18 +101,18 @@ import AVFoundation
         defer { web.configuration.userContentController.removeAllUserScripts(); originalScripts.forEach { web.configuration.userContentController.addUserScript($0) } }
         let fixtureURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "streak", withExtension: "json"))
         let fixture = try String(contentsOf: fixtureURL, encoding: .utf8)
-        let source = "window.imantoCapabilities.haptics=true;localStorage.setItem('imanto-haptics-v1','true');localStorage.setItem('krazel-imanes-main-v6', JSON.stringify(\(fixture)));window.imantoStreakTest=true;"
+        let source = "window.imantoCapabilities={...(window.imantoCapabilities||{}),haptics:true};localStorage.setItem('imanto-haptics-v1','true');localStorage.setItem('krazel-imanes-main-v6', JSON.stringify(\(fixture)));window.imantoStreakTest=true;"
         web.configuration.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         var cues: [NativeHaptics.Cue] = []
         controller.haptics = NativeHaptics(view: controller.view, supported: true, output: { cues.append($0) })
-        let root = try XCTUnwrap(Bundle.main.url(forResource: "Web", withExtension: nil))
-        web.loadFileURL(root.appendingPathComponent("index.html"), allowingReadAccessTo: root)
+        web.reload()
         var ready = false
         for _ in 0..<600 {
             if let value = try? await web.evaluateJavaScript("window.imantoStreakTest===true && document.querySelector('#board')?.getAttribute('aria-busy')==='false'"), (value as? Bool) == true { ready = true; break }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
-        XCTAssertTrue(ready);guard ready else { return }
+        let diagnostics = try? await web.evaluateJavaScript("JSON.stringify({marker:window.imantoStreakTest,busy:document.querySelector('#board')?.getAttribute('aria-busy'),state:localStorage.getItem('krazel-imanes-main-v6')})")
+        XCTAssertTrue(ready, "Streak fixture reload: \(String(describing: diagnostics)); errors: \(controller.scriptErrors)");guard ready else { return }
         // Same gesture code as the app, including touch lift and captured-pointer cancellation.
         let gestures = """
         (()=>{const tray=document.querySelector('#tray');window.qaDrag=(target,cancel=false)=>{const b=tray.querySelector('button:not(:disabled)'),s=b.getBoundingClientRect(),r=target?.getBoundingClientRect();const fire=(type,x,y,el=tray)=>el.dispatchEvent(new PointerEvent(type,{pointerId:61,pointerType:'touch',isPrimary:true,button:0,buttons:type==='pointerup'?0:1,bubbles:true,cancelable:true,clientX:x,clientY:y}));fire('pointerdown',s.x+s.width/2,s.y+s.height/2,b.querySelector('.chip'));const x=r?r.x+r.width/2:innerWidth-5,y=r?r.y+r.height/2+38:innerHeight-5;fire('pointermove',x,y);fire(cancel?'pointercancel':'pointerup',x,y);};return true;})()
