@@ -23,6 +23,7 @@ struct AdConfiguration {
 }
 
 @MainActor protocol NativeAdProviding: AnyObject {
+    func initialize(_ completion: @escaping (Bool) -> Void)
     func ready(_ kind: String, completion: @escaping (Bool) -> Void)
     func available(_ kind: String) -> Bool
     func show(_ kind: String, onShown: @escaping () -> Void, onEarned: @escaping () -> Void, completion: @escaping (Bool, Bool) -> Void)
@@ -30,17 +31,44 @@ struct AdConfiguration {
     func privacy(_ completion: @escaping (Bool) -> Void)
     func updateLayout()
 }
-extension NativeAdProviding { func updateLayout() {} }
+extension NativeAdProviding { func updateLayout() {} ; func initialize(_ completion: @escaping (Bool) -> Void) { completion(false) } }
 @MainActor final class NativeAds {
     weak var owner: GameController?
     let config = AdConfiguration()
     private(set) var fullscreenPresenting = false
     var provider: NativeAdProviding?
+    private var initializing = false
+    private var initialized = false
+    private var retry: DispatchWorkItem?
+    private var attempts = 0
     init(owner: GameController) {
         self.owner = owner
         #if canImport(GoogleMobileAds) && canImport(UserMessagingPlatform)
+        #if DEBUG
+        // Native transport tests install a deterministic provider; never contact Google.
+        if ProcessInfo.processInfo.environment["IMANTO_NATIVE_TESTS"] != "1" { provider = GoogleAdProvider(owner: owner) }
+        #else
         provider = GoogleAdProvider(owner: owner)
         #endif
+        #endif
+    }
+    func initializeOnLaunch(resetRetries: Bool = false) {
+        if resetRetries { attempts = 0 }
+        guard !initialized, !initializing, config.enabled("privacy"),
+              let owner = owner, owner.navigationReady, owner.viewIfLoaded?.window != nil,
+              owner.presentedViewController == nil, UIApplication.shared.applicationState == .active,
+              let provider = provider else { return }
+        retry?.cancel(); retry = nil; initializing = true; attempts += 1
+        provider.initialize { [weak self] allowed in
+            guard let self = self else { return }
+            self.initializing = false; self.initialized = allowed
+            if allowed {
+                self.owner?.web.evaluateJavaScript("window.dispatchEvent(new Event('imanto-ads-initialized'))", completionHandler: nil)
+            } else if self.attempts < 3 {
+                let work = DispatchWorkItem { [weak self] in self?.initializeOnLaunch() }
+                self.retry = work; DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: work)
+            }
+        }
     }
     private func setFullscreen(_ visible: Bool) {
         fullscreenPresenting = visible
@@ -99,7 +127,8 @@ struct AdUnitIDs {
 @MainActor final class GoogleAdProvider: NSObject, NativeAdProviding, FullScreenContentDelegate, BannerViewDelegate {
     weak var owner: GameController?
     private var started = false
-    private var preparing = false
+    private let consentPreparation = ConsentPreparation()
+    private var preparing: Bool { consentPreparation.running }
     private var interstitial: InterstitialAd?
     private var rewarded: RewardedAd?
     private var loadedAt: [String: Date] = [:]
@@ -115,20 +144,31 @@ struct AdUnitIDs {
     private var shown = false, earned = false
     init(owner: GameController?) { self.owner = owner }
     private func prepare(_ completion: @escaping (Bool) -> Void) {
-        guard let owner = owner, !preparing else { completion(false); return }
         if started { completion(ConsentInformation.shared.canRequestAds); return }
-        preparing = true
-        ConsentInformation.shared.requestConsentInfoUpdate(with: RequestParameters()) { [weak self] error in
-            guard let self = self else { completion(false); return }
-            guard error == nil else { self.preparing = false; completion(false); return }
-            ConsentForm.loadAndPresentIfRequired(from: owner) { [weak self] error in
-                guard let self = self else { completion(false); return }
-                guard error == nil, ConsentInformation.shared.canRequestAds else { self.preparing = false; completion(false); return }
-                MobileAds.shared.start { [weak self] _ in
-                    self?.started = true; self?.preparing = false; completion(true)
+        consentPreparation.run({ [weak self] finish in
+            guard let self = self, let owner = self.owner, self.mayPresentConsent else { finish(false); return }
+            ConsentInformation.shared.requestConsentInfoUpdate(with: RequestParameters()) { [weak self] error in
+                guard let self = self, error == nil, self.mayPresentConsent else { finish(false); return }
+                let start: (Error?) -> Void = { [weak self] error in
+                    guard let self = self, error == nil, ConsentInformation.shared.canRequestAds else { finish(false); return }
+                    MobileAds.shared.start { [weak self] _ in self?.started = true; finish(true) }
                 }
+                if ConsentInformation.shared.consentStatus == .required {
+                    // Like Tarot: check again after loading, before presenting a late form.
+                    ConsentForm.load { [weak self] form, error in
+                        guard let self = self, error == nil, let form = form, self.mayPresentConsent else { finish(false); return }
+                        form.present(from: owner, completionHandler: start)
+                    }
+                } else { start(nil) }
             }
-        }
+        }, completion: completion)
+    }
+    private var mayPresentConsent: Bool {
+        guard let owner = owner else { return false }
+        return owner.viewIfLoaded?.window != nil && owner.presentedViewController == nil && UIApplication.shared.applicationState == .active && fullscreenCompletion == nil
+    }
+    func initialize(_ completion: @escaping (Bool) -> Void) {
+        prepare(completion)
     }
     private func request() -> Request {
         let request = Request(), extras = Extras()

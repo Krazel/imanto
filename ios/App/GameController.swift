@@ -73,6 +73,7 @@ final class GameController: UIViewController, WKNavigationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(interrupted), name: AVAudioSession.interruptionNotification, object: nil)
     }
     override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); ads?.updateLayout() }
+    override func viewDidAppear(_ animated: Bool) { super.viewDidAppear(animated); ads?.initializeOnLaunch() }
     func receive(_ message: WKScriptMessage) {
         #if DEBUG
         if message.name == "imantoDiagnostics", let error = message.body as? String { scriptErrors.append(error); NSLog("Imanto bundled script: %@", error); return }
@@ -89,11 +90,11 @@ final class GameController: UIViewController, WKNavigationDelegate {
             subscriptions.receive(body)
         }
     }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true; ads.initializeOnLaunch() }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     @objc private func suspend() { haptics.active = false; audio.active = false; audio.pause() }
-    @objc private func resume() { haptics.active = !ads.fullscreenPresenting; audio.active = !ads.fullscreenPresenting; audio.reconcile(); Task { await subscriptions.refresh() } }
+    @objc private func resume() { haptics.active = !ads.fullscreenPresenting; audio.active = !ads.fullscreenPresenting; audio.reconcile(); ads.initializeOnLaunch(resetRetries: true); Task { await subscriptions.refresh() } }
     @objc private func interrupted(_ notification: Notification) {
         guard let number = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: number) else { return }

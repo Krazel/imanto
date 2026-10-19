@@ -9,7 +9,10 @@ import WebKit
     var banner: UIView?
     var presentations: [String] = []
     var audioPaused: [Bool] = []
+    var initializations = 0
+    var consentReady = true
     init(_ owner: GameController) { self.owner = owner }
+    func initialize(_ completion: @escaping (Bool) -> Void) { initializations += 1; completion(consentReady) }
     func ready(_ kind: String, completion: @escaping (Bool) -> Void) { completion(true) }
     func available(_ kind: String) -> Bool { true }
     func privacy(_ completion: @escaping (Bool) -> Void) { completion(true) }
@@ -41,6 +44,20 @@ import WebKit
 }
 
 @MainActor final class AdsIntegrationTests: XCTestCase {
+    func testConsentStartsWithoutPrivacyButtonOrAdPlacement() async throws {
+        let owner = try await controller(), original = owner.ads, ads = NativeAds(owner: owner)
+        let fixture = AdFixture(owner); ads.provider = fixture; owner.ads = ads
+        defer { owner.ads = original }
+        fixture.consentReady = false
+        ads.initializeOnLaunch()
+        XCTAssertEqual(fixture.initializations, 1)
+        fixture.consentReady = true
+        ads.initializeOnLaunch()
+        ads.initializeOnLaunch()
+        XCTAssertEqual(fixture.initializations, 2, "Retry succeeds and later lifecycle calls do not initialize twice")
+        XCTAssertTrue(fixture.presentations.isEmpty, "Consent initialization must not show a fullscreen ad")
+        XCTAssertNil(fixture.banner, "Consent initialization must not bypass the free first games")
+    }
     private func controller() async throws -> GameController {
         let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         for _ in 0..<600 {

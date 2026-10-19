@@ -9,7 +9,8 @@ import {MAIN_SAVE_KEY,loadMain} from './main-save.mjs';
 import {DEMOS,effectScene,createEffectsRoom} from './effect-demos.mjs';
 import {createCelebration} from './celebration.mjs';
 import {checkLines,applyLineCheck} from './line-search.mjs';
-import {t,initializeLanguage} from './i18n.mjs';
+import {t,initializeLanguage,language} from './i18n.mjs';
+import {writeScore,fitScore,scoreText} from './score-display.mjs';
 import {createAudio} from './audio.mjs';
 import {createHaptics} from './haptics.mjs';
 import {readCombo} from './combo.mjs';
@@ -121,7 +122,7 @@ function idleMessage(){return IS_MAIN?(guidanceSeen?'':t('Elige una ficha y toca
 selected=state.tray.findIndex(Boolean);
 const cells=Array.from({length:25},(_,i)=>{const b=document.createElement('button');b.className='cell';b.dataset.at=i;cellsEl.append(b);return b;});
 function persist(){try{localStorage.setItem(SAVE,JSON.stringify(state));}catch{}if(IS_MAIN)personalBest.update(state.score);renderBest();}
-function renderBest(){const best=personalBest.get();$('#best-score').textContent=best;$('#personal-best').setAttribute('aria-label',t('Récord personal: {n}',{n:best}));}
+function renderBest(){const best=personalBest.get();writeScore($('#best-score'),best,language,true);$('#personal-best').setAttribute('aria-label',t('Récord personal: {n}',{n:scoreText(best,language).exact}));}
 function renderCombo(){
   const combo=readCombo(state.combo,state.round),badge=$('#combo-badge');badge.hidden=!combo.count;
   if(!combo.count)return;
@@ -131,12 +132,12 @@ function renderCombo(){
 }
 let scoreFrame=0;
 function showScore(value,animate=false){
-  cancelAnimationFrame(scoreFrame);const el=$('#score'),from=Number(el.textContent)||0;
+  cancelAnimationFrame(scoreFrame);const el=$('#score'),from=Number(el.dataset.value)||0;
   el.setAttribute('aria-label',t('Puntuación: {n}',{n:value}));
   el.dataset.wide=String(value).length>6;
-  if(!animate||reduce.matches){el.textContent=value;return;}
+  if(!animate||reduce.matches){writeScore(el,value,language,true);return;}
   const begin=performance.now();
-  const tick=now=>{const progress=Math.min(1,(now-begin)/280);el.textContent=Math.round(from+(value-from)*(1-(1-progress)**3));if(progress<1)scoreFrame=requestAnimationFrame(tick);};
+  const tick=now=>{const progress=Math.min(1,(now-begin)/280);writeScore(el,Math.round(from+(value-from)*(1-(1-progress)**3)),language,true);if(progress<1)scoreFrame=requestAnimationFrame(tick);};
   scoreFrame=requestAnimationFrame(tick);el.classList.remove('score-reward');void el.offsetWidth;el.classList.add('score-reward');
 }
 function position(el,at){el.style.setProperty('--row',Math.floor(at/5));el.style.setProperty('--col',at%5);}
@@ -244,11 +245,12 @@ function openMenu(over=state.over){
   menu.dataset.mode=over?'over':'pause';
   $('#menu-title').textContent=over?t('Fin de la partida'):t('En pausa');
   $('#menu-copy').textContent=over?t('Ya no hay líneas posibles.'):t('Tu partida sigue aquí.');
-  $('#menu-score').textContent=state.score;$('#menu-best').textContent=personalBest.get();
+  writeScore($('#menu-score'),state.score,language);writeScore($('#menu-best'),personalBest.get(),language);
   $('#menu-turns').textContent=over?t(holes===1?' · {n} hueco libre':' · {n} huecos libres',{n:holes}):'';
   $('#end-explanation').hidden=!over;$('#end-explanation').textContent=holes?t('Has terminado antes de llenar el tablero.'):t('El tablero está lleno y no quedan líneas.');
   $('#continue').hidden=over;$('#view-board').hidden=!over;$('#menu-close').hidden=over;
   $('#new-game').className=over?'primary':'secondary';if(!menu.open)menu.showModal();
+  fitScores();
   refreshRevive();
 }
 async function refreshRevive(){
@@ -333,6 +335,10 @@ async function syncAutomaticAds(){
     try{await ads.ready('interstitial');}finally{preloadingInterstitial=false;}
   }
 }
+// Native consent initialization can finish after initial membership rendering.
+addEventListener('imanto-ads-initialized',()=>{if(IS_MAIN)void syncAutomaticAds();});
+function fitScores(){for(const id of ['#score','#best-score','#menu-score','#menu-best'])fitScore($(id));}
+addEventListener('resize',fitScores);
 async function syncMembership(){
   await subscriptions.refresh();renderMembership();
   await syncAutomaticAds();
