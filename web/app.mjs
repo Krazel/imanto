@@ -17,6 +17,8 @@ import {readCombo} from './combo.mjs';
 import {createPersonalBest} from './personal-best.mjs';
 import {installTrayDrag} from './drag.mjs';
 import {installBoardPress} from './board-press.mjs';
+import {decorateScreenIcons} from './screen-icons.mjs';
+decorateScreenIcons();
 const $=s=>document.querySelector(s);
 const boardEl=$('#board'),cellsEl=$('#cells'),piecesEl=$('#pieces'),previewEl=$('#preview');
 const trayEl=$('#tray'),status=$('#status'),menu=$('#menu'),help=$('#instructions');
@@ -307,24 +309,31 @@ function renderMembership(){
   $('#membership-state').textContent=t(!subscriptions.enabled()?'Próximamente. Todavía no se puede comprar.':!member.available?'No se pudo conectar con la tienda. Inténtalo de nuevo.':member.active?'Suscripción activa · sin anuncios automáticos':'Elige tu suscripción');
   const plans=$('#membership-plans');plans.replaceChildren();
   if(!subscriptions.enabled())for(const plan of MONTHLY_PLAN_PREVIEW){
-    const card=document.createElement('div');card.className='membership-plan';
-    const price=document.createElement('strong'),allowance=document.createElement('span');
-    price.textContent=t('{price}/mes',{price:new Intl.NumberFormat(document.documentElement.lang,{style:'currency',currency:'EUR'}).format(plan.priceCents/100)});
-    allowance.textContent=planBenefit(plan);
-    card.append(price,allowance);plans.append(card);
+    const card=document.createElement('div');
+    fillPlanCard(card,plan,new Intl.NumberFormat(language,{style:'currency',currency:'EUR'}).format(plan.priceCents/100));plans.append(card);
   }
   for(const plan of member.products){
-    const button=document.createElement('button');button.className='secondary';button.type='button';
-    button.textContent=`${plan.name} · ${t('{price}/mes',{price:plan.price})} · ${planBenefit(MONTHLY_PLAN_PREVIEW.find(p=>p.productId===plan.id)||plan)}`;
+    const button=document.createElement('button');button.type='button';
+    fillPlanCard(button,MONTHLY_PLAN_PREVIEW.find(p=>p.productId===plan.id)||plan,plan.price);
     button.disabled=!member.available;button.addEventListener('click',()=>membershipAction(()=>subscriptions.purchase(plan.id)));plans.append(button);
   }
   $('#membership-restore').disabled=!subscriptions.enabled();$('#membership-manage').disabled=!subscriptions.enabled();
-  $('#membership-terms').hidden=!member.products.length;
+  $('#membership-terms').hidden=false;
+}
+function fillPlanCard(card,plan,price){
+  card.className='membership-plan';
+  const art=document.createElement('span');art.className='plan-art';art.setAttribute('aria-hidden','true');
+  art.dataset.tier=Math.max(0,MONTHLY_PLAN_PREVIEW.findIndex(p=>p.productId===plan.productId));
+  for(let i=0;i<4;i++)art.append(document.createElement('i'));
+  const copy=document.createElement('span');copy.className='plan-copy';
+  const cost=document.createElement('strong'),benefit=document.createElement('span');
+  cost.textContent=t('{price}/mes',{price});benefit.textContent=planBenefit(plan);copy.append(cost,benefit);card.append(art,copy);
+  if(card.tagName==='BUTTON'){const arrow=document.createElement('span');arrow.className='plan-arrow';arrow.textContent='›';arrow.setAttribute('aria-hidden','true');card.append(arrow);}
 }
 function planBenefit(plan){
-  const blocks=plan.unlimited?t('Elimina un bloque por partida'):t('Elimina hasta {n} bloques al mes',{n:plan.monthlyRemovals});
-  const revive=plan.dailyRevives===null?t('Un revivir por partida'):plan.dailyRevives===1?t('Un revivir al día'):plan.dailyRevives?t('{n} revivires al día',{n:plan.dailyRevives}):t('Sin revivires incluidos');
-  return `${blocks} · ${revive}`;
+  const blocks=plan.unlimited?t('Retiradas ilimitadas'):t('{n} retiradas al mes',{n:plan.monthlyRemovals});
+  const revive=plan.dailyRevives===null?t('Un revivir por partida'):plan.dailyRevives===1?t('Un revivir al día'):plan.dailyRevives?t('{n} revivires al día',{n:plan.dailyRevives}):'';
+  return revive?`${blocks} · ${revive}`:blocks;
 }
 let preloadingInterstitial=false;
 async function syncAutomaticAds(){
@@ -354,6 +363,9 @@ const openMembership=async()=>{renderMembership();membership.showModal();await s
 $('#membership-open').addEventListener('click',openMembership);
 $('#membership-upgrade').addEventListener('click',openMembership);
 $('#membership-close').addEventListener('click',()=>membership.close());
+const settings=$('#settings');
+$('#settings-open').addEventListener('click',()=>settings.showModal());
+$('#settings-close').addEventListener('click',()=>settings.close());
 $('#membership-restore').addEventListener('click',()=>membershipAction(()=>subscriptions.restore()));
 $('#membership-manage').addEventListener('click',()=>membershipAction(()=>subscriptions.manage()));
 addEventListener('imanto-subscription-changed',()=>syncMembership());

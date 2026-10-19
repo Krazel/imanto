@@ -18,6 +18,7 @@ for(const kind of ['iPhone','iPad']){
  fs.copyFileSync(snapshot,`artifacts/qa/${kind}.png`);
  const membership=container+'/Documents/imanto-subscription-qa.png';if(fs.existsSync(membership))fs.copyFileSync(membership,`artifacts/qa/${kind}-subscription.png`);
  const ads=container+'/Documents/imanto-ads-qa.png';if(fs.existsSync(ads))fs.copyFileSync(ads,`artifacts/qa/${kind}-ads-layout.png`);
+ for(const file of fs.readdirSync(container+'/Documents').filter(name=>name.startsWith('imanto-screen-')&&name.endsWith('.png')))fs.copyFileSync(container+'/Documents/'+file,`artifacts/qa/${kind}-${file}`);
  const app='artifacts/DerivedData/Build/Products/Debug-iphonesimulator/Imanto.app';
  run('xcrun',['simctl','install',d.udid,app]);
  run('xcrun',['simctl','launch',d.udid,'com.krazel.imanto']);

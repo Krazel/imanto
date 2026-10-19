@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="effects.css">
   <link rel="stylesheet" href="looks.css">
+  <link rel="stylesheet" href="screens.css">
   <script type="module" src="appearance.mjs"></script>
 </head>
 <body>
@@ -39,69 +40,69 @@
   <dialog id="menu" aria-labelledby="menu-title">
     <div class="dialog-content">
       <button id="menu-close" class="icon-button close-button" aria-label="Cerrar pausa">×</button>
-      <p class="eyebrow">IMANTO</p><h2 id="menu-title">En pausa</h2><p id="menu-copy">Tu partida sigue aquí.</p>
-      <div id="menu-stats" class="menu-stats"><div><strong id="menu-score">0</strong><span>puntos</span></div><div><strong id="menu-best">0</strong><span>Récord personal</span><span id="menu-turns"></span></div></div>
+      <div class="block-mark" aria-hidden="true"><i></i><i></i><i></i></div><p class="eyebrow">IMANTO</p><h2 id="menu-title">En pausa</h2><p id="menu-copy">Tu partida sigue aquí.</p>
+      <div id="menu-stats" class="menu-stats"><div class="score-card"><span>Puntuación</span><strong id="menu-score">0</strong></div><div class="best-card"><span><i data-icon="trophy"></i>Récord personal</span><strong id="menu-best">0</strong></div></div><span id="menu-turns" hidden></span>
       <p id="end-explanation" class="end-explanation" hidden></p>
-      <button id="continue" class="primary">Seguir jugando</button>
+      <button id="continue" class="primary"><i data-icon="play"></i><span>Seguir jugando</span></button>
+      <button id="new-game" class="secondary">Nueva partida</button>
       <button id="credit-removal" class="secondary" hidden>Quitar una ficha · usar una retirada</button>
-      <button id="revive" class="primary" hidden>Revivir viendo un anuncio</button>
+      <button id="revive" class="secondary outline" hidden><i data-icon="video"></i><span>Revivir viendo un anuncio</span></button>
       <button id="paid-revive" class="primary" hidden>Revivir · incluido en tu plan</button>
       <p id="revive-copy" class="end-explanation" hidden>Elimina una ficha del tablero. Una sola vez por partida.</p>
       <button id="membership-upgrade" class="text-button" hidden>Cambiar de plan</button>
-      <button id="new-game" class="secondary">Nueva partida</button><button id="view-board" class="secondary outline" hidden>Ver tablero</button><button id="menu-help" class="text-button">Cómo jugar</button>
-      <details class="settings-panel"><summary>Ajustes</summary>
-        <button id="membership-open" class="text-button">Suscripción</button>
-        <button id="ad-privacy" class="text-button" hidden>Privacidad de los anuncios</button>
-        <label class="setting-row" for="language">Idioma<select id="language"><option value="auto">Automático (dispositivo)</option><option value="en">English</option><option value="es">Español</option></select></label>
-        <label class="setting-row"><span>Efectos de sonido</span><input id="sound-enabled" type="checkbox" checked></label>
-        <label class="setting-row"><span>Música</span><input id="music-enabled" type="checkbox"></label>
-        <label id="haptics-row" class="setting-row" hidden><span>Vibración</span><input id="haptics-enabled" type="checkbox" checked></label>
-        <label class="setting-slider" for="sound-volume">Volumen de efectos<input id="sound-volume" type="range" min="0" max="1" step="0.05" value="0.7"></label>
-        <label class="setting-slider" for="music-volume">Volumen de música<input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.15"></label>
-        <details class="audio-previews"><summary>Escuchar sonidos</summary><p>Sonidos nuevos en prueba. La música es opcional.</p><div class="audio-buttons"><button type="button" data-cue="button">Botón</button><button type="button" data-cue="place">Colocar</button><button type="button" data-cue="move">Desplazar</button><button type="button" data-cue="line">Completar línea</button><button type="button" id="music-play">Escuchar música</button><button type="button" id="music-stop">Parar música</button></div><p id="audio-status" role="status">Listo para escuchar.</p></details>
-        <details class="audio-credits"><summary>Créditos de audio</summary><p>Kenney · <a href="https://kenney.nl/assets/impact-sounds" target="_blank" rel="noopener">Impact Sounds</a> / <a href="https://kenney.nl/assets/interface-sounds" target="_blank" rel="noopener">Interface Sounds</a> · CC0.</p><p>“Carefree” Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037" target="_blank" rel="noopener">incompetech.com</a>). <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">Creative Commons Attribution 4.0</a>.</p></details>
-      </details>
+      <button id="view-board" class="secondary outline" hidden>Ver tablero</button><nav class="menu-navigation"><button id="settings-open" class="screen-link"><i data-icon="settings"></i><span>Ajustes</span></button><button id="menu-help" class="screen-link"><i data-icon="book"></i><span>Cómo jugar</span></button></nav>
       <details class="testing-links"><summary>Pruebas del juego</summary><a href="?effects=1">Animaciones y escenas</a><a href="?lab=1">Laboratorio de imanes</a><a href="/designs.html">Todas las pantallas</a></details>
     </div>
   </dialog>
+  <dialog id="settings" aria-labelledby="settings-title"><div class="dialog-content"><button id="settings-close" class="icon-button close-button" aria-label="Cerrar ajustes">×</button><h2 id="settings-title">Ajustes</h2>      <div class="settings-panel">
+        <section class="audio-setting"><label class="setting-row"><i data-icon="sound"></i><span>Efectos de sonido</span><input id="sound-enabled" type="checkbox" role="switch" checked></label><label class="setting-slider" for="sound-volume">Volumen de efectos<input id="sound-volume" type="range" min="0" max="1" step="0.05" value="0.7"></label></section>
+        <section class="audio-setting"><label class="setting-row"><i data-icon="music"></i><span>Música</span><input id="music-enabled" type="checkbox" role="switch"></label><label class="setting-slider" for="music-volume">Volumen de música<input id="music-volume" type="range" min="0" max="1" step="0.05" value="0.15"></label></section>
+        <label id="haptics-row" class="setting-row" hidden><i data-icon="haptics"></i><span>Vibración</span><input id="haptics-enabled" type="checkbox" role="switch" checked></label>
+        <label class="setting-row language-row" for="language"><i data-icon="globe"></i><span>Idioma</span><select id="language"><option value="auto">Automático</option><option value="en">English</option><option value="es">Español</option></select></label><button id="membership-open" class="settings-destination"><i data-icon="crown"></i><span>Suscripción</span><b aria-hidden="true">›</b></button><button id="ad-privacy" class="settings-destination" hidden><i data-icon="shield"></i><span>Privacidad de los anuncios</span><b aria-hidden="true">›</b></button><details class="audio-previews"><summary>Escuchar sonidos</summary><p>Sonidos nuevos en prueba. La música es opcional.</p><div class="audio-buttons"><button type="button" data-cue="button">Botón</button><button type="button" data-cue="place">Colocar</button><button type="button" data-cue="move">Desplazar</button><button type="button" data-cue="line">Completar línea</button><button type="button" id="music-play">Escuchar música</button><button type="button" id="music-stop">Parar música</button></div><p id="audio-status" role="status">Listo para escuchar.</p></details>
+        <details class="audio-credits"><summary><i data-icon="credits"></i><span>Créditos de audio</span></summary><p>Kenney · <a href="https://kenney.nl/assets/impact-sounds" target="_blank" rel="noopener">Impact Sounds</a> / <a href="https://kenney.nl/assets/interface-sounds" target="_blank" rel="noopener">Interface Sounds</a> · CC0.</p><p>“Carefree” Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037" target="_blank" rel="noopener">incompetech.com</a>). <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">Creative Commons Attribution 4.0</a>.</p></details>
+      </div>
+<p class="screen-brand">IMANTO</p></div></dialog>
   <dialog id="membership" aria-labelledby="membership-title"><div class="dialog-content">
     <button id="membership-close" class="icon-button close-button" aria-label="Cerrar suscripción">×</button>
-    <p class="eyebrow">IMANTO</p><h2 id="membership-title">Suscripción</h2>
+    <p class="eyebrow">IMANTO</p><h2 id="membership-title">Elige tu plan</h2><p class="membership-intro">Sin anuncios automáticos.</p>
     <p id="membership-state" role="status">Próximamente. Todavía no se puede comprar.</p>
-    <ul class="membership-benefits">
+    <details class="benefit-details"><summary>Cómo funcionan las ayudas</summary>    <ul class="membership-benefits">
       <li>Sin banner ni anuncios entre partidas mientras esté activa.</li>
       <li>Elimina un bloque del tablero para hacer espacio. Un bloque por partida.</li>
       <li>Si pierdes, revive con una ayuda incluida en tu plan o viendo un anuncio.</li>
       <li>Un revivir por partida. Los límites diarios se renuevan a medianoche, hora de España.</li>
-    </ul>
+    </ul></details>
     <p id="membership-balance" hidden></p>
     <p id="membership-revives" hidden></p>
     <div id="membership-plans"></div>
-    <p class="membership-note">Los bloques que no elimines de tu saldo mensual se conservan. Los vídeos siempre son voluntarios.</p>
+    <p class="membership-limits"><strong>Máximo: una retirada y un revivir por partida.</strong><span>Los bloques que no elimines de tu saldo mensual se conservan. Los vídeos siempre son voluntarios.</span></p>
+    <p id="membership-terms" class="membership-note">Suscripción mensual con renovación automática. Puedes cancelarla en los ajustes de Apple. </p>
     <div class="membership-actions"><button id="membership-restore" class="text-button" disabled>Restaurar compras</button><button id="membership-manage" class="text-button" disabled>Gestionar suscripción</button></div>
-    <p id="membership-terms" class="membership-note" hidden>Suscripción mensual con renovación automática. Puedes cancelarla en los ajustes de Apple. <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">Condiciones de uso</a> · <a href="https://krazel.github.io/imanto/privacy/" target="_blank" rel="noopener">Privacidad</a></p>
+    <div class="membership-legal"><a href="https://krazel.github.io/imanto/privacy/" target="_blank" rel="noopener">Privacidad</a><a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">Condiciones de uso</a></div>
   </div></dialog>
   <dialog id="instructions" class="instructions-dialog" aria-labelledby="help-title">
     <div class="dialog-content">
       <button id="help-close-icon" class="icon-button close-button" aria-label="Cerrar ayuda">×</button>
       <p class="eyebrow">IMANTO</p><h2 id="help-title">Cómo jugar</h2>
       <div class="rule-cards">
-        <section class="rule-card"><div class="mini-board" data-illustration="choose" aria-hidden="true"></div><div><h3>1. Elige y coloca</h3><p>Cada tanda trae tres fichas. Colócalas en el orden que quieras. Al usar las tres recibes las de «Después».</p></div></section>
-        <section class="rule-card"><div class="mini-board" data-illustration="push" aria-hidden="true"></div><div><h3>2. Empuja una vez</h3><p>Solo empuja la ficha que colocas. Los vecinos se mueven a la vez, una casilla. Las diagonales no reaccionan.</p></div></section>
-        <section class="rule-card"><div class="mini-board" data-illustration="line" aria-hidden="true"></div><div><h3>3. Completa una línea</h3><p>Cinco del mismo color, en horizontal o vertical.</p></div></section>
+        <section class="rule-card"><div class="mini-board" data-illustration="choose" aria-hidden="true"></div><div><h3>1. Coloca una ficha</h3><p>Toca un hueco o arrastra una ficha.</p></div></section>
+        <section class="rule-card"><div class="mini-board" data-illustration="push" aria-hidden="true"></div><div><h3>2. Empuja las vecinas</h3><p>Solo hacia arriba, abajo, izquierda y derecha.</p></div></section>
+        <section class="rule-card"><div class="line-example" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div><h3>3. Completa una línea</h3><p>Cinco del mismo color, en horizontal o vertical.</p></div></section>
       </div>
-      <p id="movement-rule" class="rule-note">Si hay una fila bloqueando, solo se mueve la última con hueco. Sin desvíos.</p>
+      <p class="combo-help"><strong>Encadena combos</strong>Haz otra línea en esta tanda o en la siguiente.</p>
+      <details class="help-details"><summary>Más detalles</summary>      <p id="movement-rule" class="rule-note">Si hay una fila bloqueando, solo se mueve la última con hueco. Sin desvíos.</p>
       <div class="reward-strip" aria-label="Puntos por líneas simultáneas"><div>1 línea<strong>50</strong></div><div>2 líneas<strong>200</strong></div><div>3 líneas<strong>450</strong></div></div>
       <p class="help-ending">La partida termina cuando ya no puedes formar líneas, aunque queden huecos.</p>
-      <p class="combo-help">Cada jugada con líneas aumenta tu combo: ×2, ×3… y multiplica los puntos. Puedes continuar en esta tanda o en la siguiente; cada acierto renueva el margen.</p>
+
       <p class="drag-help">Toca una ficha y un hueco, o arrástrala desde la tanda hasta el tablero. También puedes mantener el dedo en un hueco, deslizarlo y soltar para colocar.</p>
+<p>Cada tanda trae tres fichas. Colócalas en el orden que quieras. Al usar las tres recibes las de «Después».</p><p>Solo empuja la ficha que colocas. Los vecinos se mueven a la vez, una casilla. Las diagonales no reaccionan.</p>      <p class="combo-details">Cada jugada con líneas aumenta tu combo: ×2, ×3… y multiplica los puntos. Puedes continuar en esta tanda o en la siguiente; cada acierto renueva el margen.</p></details>
       <button id="close-help" class="primary">Entendido</button>
     </div>
   </dialog>
   <dialog id="restart-confirm" aria-labelledby="restart-title"><div class="dialog-content">
     <button id="restart-close" class="icon-button close-button" aria-label="Cancelar nueva partida">×</button>
-    <p class="eyebrow">NUEVA PARTIDA</p><h2 id="restart-title">¿Empezar de nuevo?</h2><p>Tu partida actual se sustituirá.</p>
-    <button id="restart-yes" class="primary">Empezar de nuevo</button><button id="restart-no" class="secondary">Seguir jugando</button>
+    <div class="block-mark large" aria-hidden="true"><i></i><i></i><i></i></div><h2 id="restart-title">¿Empezar de nuevo?</h2><p>Tu partida actual se sustituirá.</p>
+    <button id="restart-no" class="primary">Seguir jugando</button><button id="restart-yes" class="secondary danger">Empezar de nuevo</button>
   </div></dialog>
   <script type="module" src="app.mjs"></script>
 </body>

@@ -1,7 +1,8 @@
 # Imanto
 
-Color puzzle by Krazel Games. Native iOS candidate 0.19.1 (1), English/Spanish.
-Automatic launch consent, coalesced ad preparation and overflow-safe score presentation.
+Color puzzle by Krazel Games. Native iOS candidate 0.20 (1), English/Spanish.
+Approved auxiliary screens, independent settings, restrained pause scores and readable plans.
+Automatic launch consent and overflow-safe score presentation are preserved.
 Random openings, combos, persistent score and game. Recorded audio uses AVAudioPlayer.
 Subscriptions use StoreKit 2 and local benefit counters verified with StoreKit. Monthly block
 helpers and included daily revives are separate, each capped at one per game.

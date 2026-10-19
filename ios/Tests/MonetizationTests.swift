@@ -96,6 +96,13 @@ import WebKit
         }
         XCTAssertTrue(ready, "Included revive must become available through the native wallet bridge")
         guard ready else { return }
+        let resultImage: UIImage = try await withCheckedThrowingContinuation { continuation in
+            web.takeSnapshot(with: nil) { image, error in
+                if let image = image { continuation.resume(returning: image) }
+                else { continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown)) }
+            }
+        }
+        try XCTUnwrap(resultImage.pngData()).write(to: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("imanto-screen-result.png"))
         let before = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('krazel-imanes-main-v6')).board.filter(Boolean).length") as! Int
         _ = try await web.evaluateJavaScript("document.querySelector('#paid-revive').click();true")
         for _ in 0..<300 {
@@ -114,7 +121,7 @@ import WebKit
         XCTAssertEqual(state["revive"] as? String, "used")
         XCTAssertEqual(wallet.claims.count, 1)
         // No additional video/included chance in this same game.
-        _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('.settings-panel').open=true;document.querySelector('#membership-open').click();true")
+        _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('#settings-open').click();document.querySelector('#membership-open').click();true")
         let text = try await web.evaluateJavaScript("document.querySelector('#membership').textContent") as! String
         XCTAssertFalse(text.contains("Retiradas de fichas cada mes"))
         XCTAssertTrue(text.contains("hacer espacio") || text.contains("make space"))

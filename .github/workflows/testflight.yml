@@ -52,7 +52,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Imanto-0.19.1-build1-${{ github.sha }}
+          name: Imanto-0.20-build1-${{ github.sha }}
           path: |
             artifacts/testflight/
             artifacts/qa/

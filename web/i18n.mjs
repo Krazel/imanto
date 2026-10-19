@@ -139,6 +139,20 @@ export const EN={
   'Prueba preparada · coloca en el centro o reproduce':'Test ready · place in the center or press Replay'
 };
 EN['Vibración']='Haptics';
+Object.assign(EN,{
+  'Automático':'Automatic',
+  '1. Coloca una ficha':'1. Place a tile','2. Empuja las vecinas':'2. Push nearby tiles',
+  'Toca un hueco o arrastra una ficha.':'Tap an empty cell or drag a tile.',
+  'Solo hacia arriba, abajo, izquierda y derecha.':'Only up, down, left and right.',
+  'Haz otra línea en esta tanda o en la siguiente.':'Make another line in this set or the next.',
+  'Más detalles':'More details','{n} retiradas al mes':'{n} removals per month',
+  'Retiradas ilimitadas':'Unlimited removals',
+  'Cerrar ajustes':'Close settings','Elige tu plan':'Choose your plan',
+  'Sin anuncios automáticos.':'No automatic ads.',
+  'Cómo funcionan las ayudas':'How helpers work',
+  'Máximo: una retirada y un revivir por partida.':'Maximum: one removal and one revive per game.',
+  'Encadena combos':'Keep your combo going'
+});
 export function resolveLanguage({override,preference='auto',languages=[]}={}){
   if(override==='en'||override==='es')return override;
   if(preference==='en'||preference==='es')return preference;
