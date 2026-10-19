@@ -77,7 +77,7 @@ import WebKit
             if done == true { break }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
-        let json = try await web.evaluateJavaScript("window.removeEventListener('imanto-ad-result',window.imantoAdQAListener);JSON.stringify(window.imantoAdQA)") as! String
+        let json = try await web.evaluateJavaScript("window.removeEventListener('imanto-ad-result',window.imantoAdQAListener);JSON.stringify(window.imantoAdQA.filter(r=>r.requestId==='\(id)'))") as! String
         return try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [[String: Any]]
     }
     func testBannerReservesSafeAreaAndHidingRestoresTheBoard() async throws {

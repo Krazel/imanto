@@ -45,6 +45,8 @@ import AVFoundation
         let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         controller.loadViewIfNeeded()
         let web = try XCTUnwrap(controller.web)
+        let originalScripts = web.configuration.userContentController.userScripts
+        defer { web.configuration.userContentController.removeAllUserScripts(); originalScripts.forEach { web.configuration.userContentController.addUserScript($0) } }
         // Simulator has no Taptic Engine. Capture the real bridge's requests;
         // this verifies routing/mutes, never the physical sensation.
         var hapticCues: [NativeHaptics.Cue] = []
@@ -95,6 +97,8 @@ import AVFoundation
     func testStreakDragCancelAndNativeSnapshot() async throws {
         let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         let web = try XCTUnwrap(controller.web)
+        let originalScripts = web.configuration.userContentController.userScripts
+        defer { web.configuration.userContentController.removeAllUserScripts(); originalScripts.forEach { web.configuration.userContentController.addUserScript($0) } }
         let fixtureURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "streak", withExtension: "json"))
         let fixture = try String(contentsOf: fixtureURL, encoding: .utf8)
         let source = "window.imantoCapabilities.haptics=true;localStorage.setItem('imanto-haptics-v1','true');localStorage.setItem('krazel-imanes-main-v6', JSON.stringify(\(fixture)));window.imantoStreakTest=true;"

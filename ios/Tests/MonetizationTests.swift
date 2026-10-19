@@ -80,6 +80,8 @@ import WebKit
     func testIncludedReviveAndReadableSubscriptionCopy() async throws {
         let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         let web = try XCTUnwrap(controller.web)
+        let originalScripts = web.configuration.userContentController.userScripts
+        defer { web.configuration.userContentController.removeAllUserScripts(); originalScripts.forEach { web.configuration.userContentController.addUserScript($0) } }
         let originalWallet = controller.subscriptions.wallet
         let wallet = TestWallet(); controller.subscriptions.wallet = wallet
         defer { controller.subscriptions.wallet = originalWallet }
