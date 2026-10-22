@@ -60,7 +60,7 @@ try {
   assert.equal(info.ITSAppUsesNonExemptEncryption, false);
   assert(Number(info.DTSDKName.match(/\d+/)[0]) >= 26, 'iOS 26 SDK required');
   assert(fs.existsSync(path.join(app, 'PrivacyInfo.xcprivacy')), 'Missing privacy manifest');
-  for(const file of ['Web/index.html','Audio/button.wav',...Array.from({length:5},(_,i)=>`Audio/place-spring-${i}.wav`),'Audio/move.wav','Audio/line-win.wav','Audio/meditation-impromptu-01.mp3']) assert(fs.existsSync(path.join(app,file)), 'Missing bundled resource '+file);
+  for(const file of ['Web/index.html','Web/six.html','Audio/button.wav',...Array.from({length:5},(_,i)=>`Audio/place-spring-${i}.wav`),'Audio/move.wav','Audio/line-win.wav','Audio/meditation-impromptu-01.mp3']) assert(fs.existsSync(path.join(app,file)), 'Missing bundled resource '+file);
   run('codesign', ['--verify', '--deep', '--strict', app]);
   const options = path.join(temp, 'ExportOptions.plist');
   run('python3', ['-c', 'import plistlib,json,sys; plistlib.dump(json.load(sys.stdin),open(sys.argv[1],"wb"))', options], {input:JSON.stringify({method:'app-store-connect',destination:'export',teamID:cfg.teamId,signingStyle:'manual',signingCertificate:'Apple Distribution',provisioningProfiles:{[cfg.bundleId]:provision.Name},manageAppVersionAndBuildNumber:false,uploadSymbols:true,stripSwiftSymbols:true}),stdio:['pipe','inherit','inherit']});

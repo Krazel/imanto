@@ -113,6 +113,7 @@ dialog .screen-link>i[data-icon]{margin:0;width:25px;height:25px}
 @media(max-height:650px){#menu .dialog-content{padding-top:19px}#menu .menu-stats{margin-top:12px}#menu .menu-stats>div{padding-block:10px}#menu .menu-navigation{margin-top:10px}#menu .screen-link{min-height:65px}#menu .eyebrow{margin-bottom:10px}}
 
 html {touch-action:pan-y;}
+#menu .six-link{display:flex;align-items:center;justify-content:center;min-height:44px;margin:7px 0;color:#246b70;font-size:15px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 #menu .menu-stats strong{white-space:nowrap;overflow-wrap:normal}
 #first-ad-offer h2{font-size:30px}#first-ad-offer p{line-height:1.5}#first-ad-offer button{margin-top:12px}
 

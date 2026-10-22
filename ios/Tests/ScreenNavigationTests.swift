@@ -57,6 +57,30 @@ import WebKit
         _ = try await web.evaluateJavaScript("document.querySelector('#restart-no').click();true")
         let open = try await web.evaluateJavaScript("document.querySelectorAll('dialog[open]').length") as! Int
         XCTAssertEqual(open, 0)
+        // The optional 6×6 is shipped offline, with its own save and score.
+        let mainSave = try await web.evaluateJavaScript("localStorage.getItem('krazel-imanes-main-v6')") as! String
+        _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('#try-six').click();true")
+        try await waitFor(web, "location.pathname.endsWith('/six.html') && document.querySelectorAll('#play-board .cell').length===36")
+        let trialHTMLAudio = try await web.evaluateJavaScript("document.querySelectorAll('audio').length") as! Int
+        XCTAssertEqual(trialHTMLAudio, 0, "The trial must use the native audio bridge too")
+        XCTAssertEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, false)
+        _ = try await web.evaluateJavaScript("document.querySelector('#line-scene').click();document.querySelector('[data-at=\"17\"]').click();true")
+        try await waitFor(web, "document.querySelector('#points')?.textContent==='50' && !document.querySelector('#line-scene').disabled")
+        let separateSave = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('imanto-six-trial-v1')).state.board.length") as! Int
+        XCTAssertEqual(separateSave, 36)
+        let trialImage = try await web.takeSnapshot(configuration: nil)
+        try XCTUnwrap(trialImage.pngData()).write(to: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("imanto-screen-six.png"))
+        let preserved = try await web.evaluateJavaScript("localStorage.getItem('krazel-imanes-main-v6')") as! String
+        XCTAssertEqual(preserved, mainSave, "Playing 6×6 must not change the original game")
+        _ = try await web.evaluateJavaScript("document.querySelector('#back').click();true")
+        try await waitFor(web, "location.pathname.endsWith('/index.html') && document.querySelectorAll('#cells .cell').length===25 && document.querySelector('#pause')?.disabled===false")
+    }
+    private func waitFor(_ web: WKWebView, _ condition: String) async throws {
+        for _ in 0..<300 {
+            if !web.isLoading, let result = try? await web.evaluateJavaScript(condition), result as? Bool == true { return }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        XCTFail("Offline navigation or gameplay timed out: \(condition)")
     }
     private func verifyAndCapture(_ web: WKWebView, id: String, name: String) async throws {
         let valid = try await web.evaluateJavaScript("(()=>{const d=document.getElementById('\(id)');return d.open&&d.scrollWidth<=d.clientWidth+1&&d.getBoundingClientRect().right<=innerWidth+1})()") as? Bool

@@ -4,6 +4,7 @@ Color puzzle by Krazel Games. Native iOS candidate 0.21 (1), English/Spanish.
 Clean jelly, painted wood and crackle ceramic; complete palettes change between games.
 Approved Spring placement with five subtle prerecorded pitches and Quick success line sound.
 Warm menus, independent settings, readable large scores and remove-ads entry in pause.
+Original 5×5 plus optional offline 6×6 in pause, with separate game and record.
 Random openings, combos, persistent score and game. Recorded audio uses AVAudioPlayer.
 Subscriptions use StoreKit 2 and local benefit counters verified with StoreKit. Block
 removals let a player continue after game over, capped at one removal per game.

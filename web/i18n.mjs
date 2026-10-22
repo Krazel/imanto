@@ -1,4 +1,5 @@
 export const EN={
+  'Probar 6×6':'Try 6×6',
   'Un revivir al día':'One revive per day',
   'Elige un bloque del tablero para eliminarlo.':'Choose one block on the board to remove.',
   'No te quedan bloques para eliminar con tu saldo. Puedes cambiar de plan.':'No block removals left in your balance. You can change your plan.',

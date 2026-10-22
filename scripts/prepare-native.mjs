@@ -8,8 +8,18 @@ const result=await build({stdin:{contents:"import './appearance.mjs';import './a
 let html=fs.readFileSync(path.join(web,'index.html'),'utf8');
 html=html.replace('<html lang="es">','<html lang="en">').replace(/<script type="module"[^>]*><\/script>/g,'');
 html=html.replace(/<link rel="stylesheet" href="([^"]+)">/g,(_,name)=>'<style>'+fs.readFileSync(path.join(web,name),'utf8')+'</style>');
-html=html.replace(/<details class="testing-links">[\s\S]*?<\/details>/,'');
+html=html.replace(/<details class="testing-links">[\s\S]*?<\/details>/,'').replace('href="six-lab/index.html"','href="six.html"');
 html=html.replace('</head>','<style>.audio-previews,.testing-links{display:none!important}html{-webkit-touch-callout:none}input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}.game{padding-bottom:18px}dialog{max-height:92svh}</style></head>');
 html=html.replace('</body>','<script>'+result.outputFiles[0].text.replaceAll('</script','<\\/script')+'</script></body>');
 fs.writeFileSync(path.join(out,'index.html'),html);
 console.log('Prepared self-contained offline Imanto: '+Buffer.byteLength(html)+' bytes; no network requests or module-loader dependency.');
+// Bundle the trial and its search worker too: file:// has no module server.
+const six=path.join(web,'six-lab');
+const worker=await build({entryPoints:[path.join(six,'worker.mjs')],bundle:true,format:'iife',target:'safari16',write:false});
+const trial=await build({entryPoints:[path.join(six,'trial.mjs')],bundle:true,format:'iife',target:'safari16',write:false,define:{IMANTO_SIX_WORKER:JSON.stringify(worker.outputFiles[0].text)}});
+let sixHTML=fs.readFileSync(path.join(six,'index.html'),'utf8').replace(/<script type="module"[^>]*><\/script>/g,'');
+sixHTML=sixHTML.replace(/<link rel="stylesheet" href="([^"]+)">/g,(_,name)=>'<style>'+fs.readFileSync(path.resolve(six,name),'utf8')+'</style>');
+sixHTML=sixHTML.replaceAll('href="../"','href="index.html"');
+sixHTML=sixHTML.replace('</body>','<script>'+trial.outputFiles[0].text.replaceAll('</script','<\\/script')+'</script></body>');
+fs.writeFileSync(path.join(out,'six.html'),sixHTML);
+console.log('Prepared offline 6×6 trial and search worker: '+Buffer.byteLength(sixHTML)+' bytes.');
