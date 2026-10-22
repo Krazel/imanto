@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {installBoardPress} from '../web/board-press.mjs';
 function surface(){const listeners=new Map();return {addEventListener:(type,fn)=>{if(!listeners.has(type))listeners.set(type,[]);listeners.get(type).push(fn);},fire(type,values={}){const event={pointerId:1,pointerType:'touch',isPrimary:true,button:0,clientX:10,clientY:20,preventDefault(){this.prevented=true;},...values};for(const fn of listeners.get(type)||[])fn(event);return event;}};}
-function setup(){
+function setup(cellCount=25){
   const board=surface(),doc=surface(),win=surface(),hover=[],drops=[];let time=1000,allowed=true;
-  const cells=Array.from({length:25},(_,at)=>({dataset:{at:String(at)},disabled:false,closest(){return this;}}));
+  const cells=Array.from({length:cellCount},(_,at)=>({dataset:{at:String(at)},disabled:false,closest(){return this;}}));
   board.contains=cell=>cells.includes(cell);doc.hit=cells[0];doc.elementFromPoint=()=>doc.hit;
   const captures=new Set();board.setPointerCapture=id=>captures.add(id);board.hasPointerCapture=id=>captures.has(id);board.releasePointerCapture=id=>{captures.delete(id);board.fire('lostpointercapture',{pointerId:id});};
-  const control=installBoardPress({board,document:doc,window:win,canStart:()=>allowed,onHover:at=>hover.push(at),onDrop:at=>drops.push(at),now:()=>time});
+  const control=installBoardPress({board,cellCount,document:doc,window:win,canStart:()=>allowed,onHover:at=>hover.push(at),onDrop:at=>drops.push(at),now:()=>time});
   const down=(at=0,extra={})=>{doc.hit=cells[at];return board.fire('pointerdown',{target:cells[at],...extra});};
   const move=(at,extra={})=>{doc.hit=at===null?null:cells[at];return board.fire('pointermove',extra);};
   const up=(at,extra={})=>{doc.hit=at===null?null:cells[at];return board.fire('pointerup',extra);};
@@ -40,3 +40,5 @@ test('cancel, lost capture, blur, hidden page, Escape and changed game state nev
   }
   const s=setup();s.down();s.block();s.up(4);assert.deepEqual(s.drops,[]);
 });
+
+test('6×6 touch placement reaches the final row and last cell',()=>{const s=setup(36);s.down(25);s.move(35);s.up(35);assert.deepEqual(s.drops,[35]);});

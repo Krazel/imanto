@@ -95,7 +95,7 @@ final class GameController: UIViewController, WKNavigationDelegate {
             subscriptions.receive(body)
         }
     }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true; reserveBannerHeight(bannerHeight); webView.scrollView.pinchGestureRecognizer?.isEnabled = false; if webView.url?.lastPathComponent == "six.html" { ads.hideBanner() } else { ads.initializeOnLaunch() } }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true; reserveBannerHeight(bannerHeight); webView.scrollView.pinchGestureRecognizer?.isEnabled = false; ads.initializeOnLaunch() }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     @objc private func suspend() { web?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('imanto-app-active',{detail:false}))", completionHandler: nil); haptics.active = false; audio.active = false; audio.pause() }

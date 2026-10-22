@@ -45,10 +45,10 @@ h1{font-size:clamp(34px,8.6vw,44px);font-weight:1000;letter-spacing:.005em;line-
 .score-bar>b.show{opacity:1;transform:translateY(0)}
 .board{width:100%;max-width:min(100%,max(276px,calc(100svh - 430px)));margin-inline:auto;aspect-ratio:1;background:var(--sand);border:7px solid var(--sand);border-radius:19px;position:relative;touch-action:none;isolation:isolate;box-shadow:0 1px 0 #fff8}
 body:not(.is-lab):not(.is-comparison) .board{max-width:min(100%,max(276px,calc(100svh - 350px)))}
-.cells,.pieces,.preview{position:absolute;inset:0}.cells{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:var(--gap)}
+.cells,.pieces,.preview{position:absolute;inset:0}.cells{display:grid;grid-template-columns:repeat(var(--board-size,5),1fr);grid-template-rows:repeat(var(--board-size,5),1fr);gap:var(--gap)}
 .cell{border:0;border-radius:10px;background:var(--slot);padding:0;min-width:0;min-height:0;outline-offset:-5px!important;box-shadow:inset 0 1px 0 #fff,0 1px 2px #68401914}
 .cell.empty:not(:disabled):hover{background:#f7e8d3}.pieces,.preview{pointer-events:none}
-.tile{position:absolute;width:calc((100% - 4 * var(--gap))/5);height:calc((100% - 4 * var(--gap))/5);left:calc(var(--col) * (100% + var(--gap))/5);top:calc(var(--row) * (100% + var(--gap))/5);border-radius:10px;border:1px solid #00000008;display:grid;place-items:center;transition:left var(--move-ms,280ms) cubic-bezier(.2,.8,.3,1),top var(--move-ms,280ms) cubic-bezier(.2,.8,.3,1);box-shadow:inset 0 2px 0 #ffffff35,inset 0 -2px 0 #0000000c}
+.tile{position:absolute;width:calc((100% - (var(--board-size,5) - 1) * var(--gap))/var(--board-size,5));height:calc((100% - (var(--board-size,5) - 1) * var(--gap))/var(--board-size,5));left:calc(var(--col) * (100% + var(--gap))/var(--board-size,5));top:calc(var(--row) * (100% + var(--gap))/var(--board-size,5));border-radius:10px;border:1px solid #00000008;display:grid;place-items:center;transition:left var(--move-ms,280ms) cubic-bezier(.2,.8,.3,1),top var(--move-ms,280ms) cubic-bezier(.2,.8,.3,1);box-shadow:inset 0 2px 0 #ffffff35,inset 0 -2px 0 #0000000c}
 .coral{background:var(--coral)}.teal{background:var(--teal)}.honey{background:var(--honey)}.violet{background:var(--violet)}
 .tile.clear{animation:clear .32s ease-in forwards}
 .tile.ghost{opacity:.5;border:2px dashed var(--ink);box-shadow:none}.cell.will-clear{box-shadow:inset 0 0 0 3px white,inset 0 0 0 5px var(--ink)}

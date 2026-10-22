@@ -124,3 +124,6 @@ html[data-banner-visible] .game{padding-bottom:max(18px,var(--imanto-banner-heig
 html[data-banner-visible] dialog{bottom:var(--imanto-banner-height);max-height:calc(100svh - var(--imanto-banner-height) - 24px)}
 #menu .remove-ads{display:flex;align-items:center;justify-content:center;gap:13px;width:100%;min-height:64px;margin:14px 0 0;padding:15px 18px;border:1px solid #e5ac39;border-radius:18px;background:linear-gradient(110deg,#f5bb4b,#f4b644);color:#432611;font-size:19px;font-weight:800;box-shadow:inset 0 1px #fff7}
 #menu .remove-ads>i[data-icon]{width:30px;height:30px;margin:0;flex:none}
+
+[data-board-size="6"] .line-example i{width:calc((100% - 15px)/6)}
+[data-board-size="6"] .heading h1{font-size:30px}

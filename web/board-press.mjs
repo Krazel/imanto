@@ -1,11 +1,11 @@
 // A board press follows the contact point, then commits once on release.
-export function installBoardPress({board,canStart,onHover,onDrop,document:doc=globalThis.document,window:win=globalThis.window,now=Date.now}){
+export function installBoardPress({board,cellCount=25,canStart,onHover,onDrop,document:doc=globalThis.document,window:win=globalThis.window,now=Date.now}){
   let press=null,ignoreClickUntil=0;
   const targetAt=(x,y)=>{
     const cell=doc.elementFromPoint(x,y)?.closest('.cell');
     if(!cell||!board.contains(cell)||cell.disabled)return null;
     const at=Number(cell.dataset.at);
-    return Number.isInteger(at)&&at>=0&&at<25&&canStart(at)?at:null;
+    return Number.isInteger(at)&&at>=0&&at<cellCount&&canStart(at)?at:null;
   };
   function hover(at){if(press&&press.at!==at){press.at=at;onHover(at);}}
   function finish(cancelled=false){

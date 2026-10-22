@@ -55,7 +55,7 @@ extension NativeAdProviding { func updateLayout() {} ; func initialize(_ complet
     func initializeOnLaunch(resetRetries: Bool = false) {
         if resetRetries { attempts = 0 }
         guard !initialized, !initializing, config.enabled("privacy"),
-              let owner = owner, owner.navigationReady, owner.web?.url?.lastPathComponent != "six.html", owner.viewIfLoaded?.window != nil,
+              let owner = owner, owner.navigationReady, owner.viewIfLoaded?.window != nil,
               owner.presentedViewController == nil, UIApplication.shared.applicationState == .active,
               let provider = provider else { return }
         retry?.cancel(); retry = nil; initializing = true; attempts += 1

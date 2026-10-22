@@ -11,8 +11,8 @@
 .tile.winning-line{--win-glow:7px}.tile.winning-all{--win-glow:24px}
 .tile.winning.clear{animation:winning-burst calc(320ms * var(--fx-speed,1)) ease-in forwards}
 .win-beam{position:absolute;display:block;opacity:0;background:linear-gradient(90deg,transparent,#fff5c5db,transparent);box-shadow:0 0 18px #ffe17a;animation:win-beam calc(580ms * var(--fx-speed,1)) ease-out calc(var(--fx-charge,340ms) * var(--fx-speed,1)) both}
-.beam-row{left:0;top:calc(var(--line) * 20% + 1%);width:100%;height:18%}
-.beam-column{top:0;left:calc(var(--line) * 20% + 1%);height:100%;width:18%;background:linear-gradient(transparent,#fff5c5db,transparent)}
+.beam-row{left:0;top:calc((var(--line) * 100% + 5%)/var(--fx-board-size,5));width:100%;height:calc(90%/var(--fx-board-size,5))}
+.beam-column{top:0;left:calc((var(--line) * 100% + 5%)/var(--fx-board-size,5));height:100%;width:calc(90%/var(--fx-board-size,5));background:linear-gradient(transparent,#fff5c5db,transparent)}
 .win-ring{position:absolute;left:50%;top:50%;width:35%;aspect-ratio:1;border:2px solid #fff3bb;border-radius:50%;box-shadow:0 0 20px #ffe69a;opacity:0;animation:win-ring calc(700ms * var(--fx-speed,1)) ease-out calc(var(--fx-charge,340ms) * var(--fx-speed,1)) both}
 .win-spark{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:2px;background:var(--spark-color);opacity:0;box-shadow:0 0 6px #fff3c6;animation:win-spark calc(750ms * var(--fx-speed,1)) ease-out calc((var(--fx-charge,340ms) + var(--spark-delay,0ms)) * var(--fx-speed,1)) both}
 .board.celebrating-all{animation:board-aura calc(1450ms * var(--fx-speed,1)) ease-out both}
@@ -24,7 +24,7 @@
 .celebrating-combo .win-glint{background:#fffbd5}.celebrating-combo .win-beam{box-shadow:0 0 24px #64d9ca}
 .combo-help,.drag-help{font-size:12px!important;color:var(--muted);padding:12px;background:#f5e8d5;border-radius:14px}
 .tile.spring-placed{z-index:4;transform-origin:50% 75%;animation:spring-place calc(480ms * var(--fx-speed,1)) ease-out both}
-.spring-place-halo{position:absolute;left:calc(var(--col) * (100% + var(--gap))/5);top:calc(var(--row) * (100% + var(--gap))/5);width:calc((100% - 4 * var(--gap))/5);height:calc((100% - 4 * var(--gap))/5);border:2px solid var(--coral);border-radius:14px;animation:spring-place-halo calc(410ms * var(--fx-speed,1)) ease-out both}
+.spring-place-halo{position:absolute;left:calc(var(--col) * (100% + var(--gap))/var(--fx-board-size,5));top:calc(var(--row) * (100% + var(--gap))/var(--fx-board-size,5));width:calc((100% - (var(--fx-board-size,5) - 1) * var(--gap))/var(--fx-board-size,5));height:calc((100% - (var(--fx-board-size,5) - 1) * var(--gap))/var(--fx-board-size,5));border:2px solid var(--coral);border-radius:14px;animation:spring-place-halo calc(410ms * var(--fx-speed,1)) ease-out both}
 .tile.winning-line{animation:none;transform-origin:50% 75%}
 .tile.winning-line.clear{animation:spring-line calc(520ms * var(--fx-speed,1)) ease-out calc(var(--spring-delay,0ms) * var(--fx-speed,1)) both}
 .board.celebrating-line{animation:none}

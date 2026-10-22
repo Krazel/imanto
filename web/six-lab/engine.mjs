@@ -1,4 +1,4 @@
-// Experimental 6x6 snapshot; production engine remains unchanged.
+// Six-by-six rules: shared feature contract, independent board geometry.
 import {BASIC_PHYSICS,normalizePhysics,repelOnce,contactPairs} from './physics.mjs';
 import {readCombo,scoreCombo} from '../combo.mjs';
 export {BASIC_PHYSICS,LAB_PHYSICS,normalizePhysics,repelOnce,contactPairs} from './physics.mjs';

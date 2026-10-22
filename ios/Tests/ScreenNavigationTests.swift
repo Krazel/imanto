@@ -57,23 +57,40 @@ import WebKit
         _ = try await web.evaluateJavaScript("document.querySelector('#restart-no').click();true")
         let open = try await web.evaluateJavaScript("document.querySelectorAll('dialog[open]').length") as! Int
         XCTAssertEqual(open, 0)
-        // The optional 6×6 is shipped offline, with its own save and score.
+        // The optional size is the complete game, with shared menus and isolated progress.
         let mainSave = try await web.evaluateJavaScript("localStorage.getItem('krazel-imanes-main-v6')") as! String
+        let sixFixtureURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "six", withExtension: "json"))
+        let sixFixture = try String(contentsOf: sixFixtureURL, encoding: .utf8)
+        web.configuration.userContentController.addUserScript(WKUserScript(source: "if(new URLSearchParams(location.search).get('size')==='6')localStorage.setItem('imanto-six-game-v1',JSON.stringify(\(sixFixture)));", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('#try-six').click();true")
-        try await waitFor(web, "location.pathname.endsWith('/six.html') && document.querySelectorAll('#play-board .cell').length===36")
-        let trialHTMLAudio = try await web.evaluateJavaScript("document.querySelectorAll('audio').length") as! Int
-        XCTAssertEqual(trialHTMLAudio, 0, "The trial must use the native audio bridge too")
+        try await waitFor(web, "location.search.includes('size=6') && document.querySelectorAll('#cells .cell').length===36 && document.querySelector('#pause')?.disabled===false")
+        let nativeOnly = try await web.evaluateJavaScript("document.querySelectorAll('audio').length") as! Int
+        XCTAssertEqual(nativeOnly, 0, "Both board sizes must use native audio")
         XCTAssertEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, false)
-        _ = try await web.evaluateJavaScript("document.querySelector('#line-scene').click();document.querySelector('[data-at=\"17\"]').click();true")
-        try await waitFor(web, "document.querySelector('#points')?.textContent==='50' && !document.querySelector('#line-scene').disabled")
-        let separateSave = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('imanto-six-trial-v1')).state.board.length") as! Int
+        _ = try await web.evaluateJavaScript("document.querySelector('[data-at=\"17\"]').click();true")
+        try await waitFor(web, "document.querySelector('#score')?.textContent==='50' && document.querySelector('#board')?.getAttribute('aria-busy')==='false'")
+        let separateSave = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('imanto-six-game-v1')).board.length") as! Int
         XCTAssertEqual(separateSave, 36)
-        let trialImage = try await web.takeSnapshot(configuration: nil)
-        try XCTUnwrap(trialImage.pngData()).write(to: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("imanto-screen-six.png"))
-        let preserved = try await web.evaluateJavaScript("localStorage.getItem('krazel-imanes-main-v6')") as! String
-        XCTAssertEqual(preserved, mainSave, "Playing 6×6 must not change the original game")
-        _ = try await web.evaluateJavaScript("document.querySelector('#back').click();true")
-        try await waitFor(web, "location.pathname.endsWith('/index.html') && document.querySelectorAll('#cells .cell').length===25 && document.querySelector('#pause')?.disabled===false")
+        let sixImage: UIImage = try await withCheckedThrowingContinuation { continuation in
+            web.takeSnapshot(with: nil) { image, error in
+                if let image = image { continuation.resume(returning: image) }
+                else { continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown)) }
+            }
+        }
+        try XCTUnwrap(sixImage.pngData()).write(to: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("imanto-screen-six.png"))
+        // The injected fixture resets the main save on navigation; compare board/score,
+        // while the material metadata is added only when the main app runs.
+        let preserved = try await web.evaluateJavaScript("JSON.stringify(JSON.parse(localStorage.getItem('krazel-imanes-main-v6')).board)") as! String
+        let original = try JSONSerialization.jsonObject(with: Data(mainSave.utf8)) as! [String: Any]
+        let preservedBoard = try JSONSerialization.jsonObject(with: Data(preserved.utf8)) as! NSArray
+        XCTAssertEqual(preservedBoard, original["board"] as? NSArray)
+        _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();true")
+        try await verifyAndCapture(web, id: "menu", name: "six-pause")
+        _ = try await web.evaluateJavaScript("document.querySelector('#menu-help').click();true")
+        let sixExample = try await web.evaluateJavaScript("document.querySelectorAll('.line-example i').length") as! Int
+        XCTAssertEqual(sixExample, 6)
+        _ = try await web.evaluateJavaScript("document.querySelector('#close-help').click();document.querySelector('#try-six').click();true")
+        try await waitFor(web, "!location.search.includes('size=6') && document.querySelectorAll('#cells .cell').length===25 && document.querySelector('#pause')?.disabled===false")
     }
     private func waitFor(_ web: WKWebView, _ condition: String) async throws {
         for _ in 0..<300 {

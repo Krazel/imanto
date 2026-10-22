@@ -1,5 +1,5 @@
 export const EN={
-  'Probar 6×6':'Try 6×6',
+  'Probar 6×6':'Try 6×6','Jugar 6×6':'Play 6×6','Jugar 5×5':'Play 5×5','Tablero de seis por seis':'Six by six board','Completa seis del mismo color':'Complete six of the same color','Seis del mismo color, en horizontal o vertical.':'Six of the same color, in a row or column.',
   'Un revivir al día':'One revive per day',
   'Elige un bloque del tablero para eliminarlo.':'Choose one block on the board to remove.',
   'No te quedan bloques para eliminar con tu saldo. Puedes cambiar de plan.':'No block removals left in your balance. You can change your plan.',

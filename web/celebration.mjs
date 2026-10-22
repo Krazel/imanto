@@ -6,8 +6,10 @@ export function celebrationFor(frame){
     detail:`${combo?frame.lineCount+' líneas · ':''}+${frame.gain} puntos`,
     charge:all?440:combo?340:180,clearDuration:all||combo?320:700,linger:all?650:combo?350:190};
 }
-export function createCelebration(board,game){
+export function createCelebration(board,game,boardSize=5){
   const layer=document.createElement('div');layer.className='celebration-layer';layer.setAttribute('aria-hidden','true');board.append(layer);
+  layer.style.setProperty('--fx-board-size',boardSize);
+  const cellPercent=100/boardSize,center=(boardSize-1)/2,innerDistance=boardSize%2?0:.5;
   let placedTile=null,placementHalo=null;
   function finishPlacement(){
     placedTile?.classList.remove('spring-placed');placementHalo?.remove();placedTile=null;placementHalo=null;
@@ -31,13 +33,16 @@ export function createCelebration(board,game){
       tile.classList.add('winning',`winning-${info.kind}`);
       if(info.kind==='line'){
         const at=frame.board.findIndex(piece=>piece?.id===Number(tile.dataset.id));
-        const along=frame.lines[0].axis==='row'?at%5:Math.floor(at/5),offset=along-2;
-        tile.style.setProperty('--spring-delay',`${Math.abs(offset)*90}ms`);
+        const along=frame.lines[0].axis==='row'?at%boardSize:Math.floor(at/boardSize);
+        const offset=(along-center)*2/center;
+        // Even boards launch their middle pair together; the outer cells still start at 180ms.
+        const springDelay=(Math.abs(along-center)-innerDistance)*180/Math.max(1,center-innerDistance);
+        tile.style.setProperty('--spring-delay',`${springDelay}ms`);
         tile.style.setProperty('--spring-x',`${frame.lines[0].axis==='row'?offset*2:0}px`);
         tile.style.setProperty('--spring-y',`${frame.lines[0].axis==='row'?0:offset*2}px`);
         const mote=document.createElement('i');mote.className='spring-mote';
-        mote.style.setProperty('--origin-x',`${(at%5+.5)*20}%`);mote.style.setProperty('--origin-y',`${(Math.floor(at/5)+.5)*20}%`);
-        mote.style.setProperty('--spring-delay',`${Math.abs(offset)*90}ms`);mote.style.setProperty('--mote-x',`${offset*4}px`);
+        mote.style.setProperty('--origin-x',`${(at%boardSize+.5)*cellPercent}%`);mote.style.setProperty('--origin-y',`${(Math.floor(at/boardSize)+.5)*cellPercent}%`);
+        mote.style.setProperty('--spring-delay',`${springDelay}ms`);mote.style.setProperty('--mote-x',`${offset*4}px`);
         layer.append(mote);
       }
     }
@@ -45,12 +50,12 @@ export function createCelebration(board,game){
     for(const line of frame.lines){
       const beam=document.createElement('i');beam.className=`win-beam beam-${line.axis}`;beam.style.setProperty('--line',line.index);layer.append(beam);
     }
-    // Two short star trails per cleared cell, bounded by the 25-cell board.
+    // Two short star trails per cleared cell, bounded by the current board.
     for(const at of frame.cleared||[])for(let n=0;n<2;n++){
       const glint=document.createElement('i');glint.className='win-glint';
-      glint.style.setProperty('--origin-x',`${(at%5+.5)*20}%`);glint.style.setProperty('--origin-y',`${(Math.floor(at/5)+.5)*20}%`);
+      glint.style.setProperty('--origin-x',`${(at%boardSize+.5)*cellPercent}%`);glint.style.setProperty('--origin-y',`${(Math.floor(at/boardSize)+.5)*cellPercent}%`);
       const angle=(at*1.7+n*3.1);glint.style.setProperty('--dx',`${Math.cos(angle)*(n?65:35)}px`);glint.style.setProperty('--dy',`${Math.sin(angle)*(n?65:35)-25}px`);
-      glint.style.setProperty('--spark-delay',`${at%5*18+n*30}ms`);layer.append(glint);
+      glint.style.setProperty('--spark-delay',`${(at%boardSize)*72/(boardSize-1)+n*30}ms`);layer.append(glint);
     }
     const ring=document.createElement('i');ring.className='win-ring';layer.append(ring);
     const sparks=info.kind==='line'?14:info.kind==='all'?36:26;
