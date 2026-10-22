@@ -7,7 +7,7 @@ import WebKit
     func testAuxiliaryScreensKeepNavigationSettingsAndLayout() async throws {
         let owner = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         let web = try XCTUnwrap(owner.web)
-        XCTAssertEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, false)
+        XCTAssertNotEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, true, "An absent or disabled pinch recognizer cannot zoom")
         // A previous score fixture restores its saved state by reloading the web view.
         try await Task.sleep(nanoseconds: 300_000_000)
         let originalScripts = web.configuration.userContentController.userScripts
@@ -66,7 +66,10 @@ import WebKit
         try await waitFor(web, "location.search.includes('size=6') && document.querySelectorAll('#cells .cell').length===36 && document.querySelector('#pause')?.disabled===false")
         let nativeOnly = try await web.evaluateJavaScript("document.querySelectorAll('audio').length") as! Int
         XCTAssertEqual(nativeOnly, 0, "Both board sizes must use native audio")
-        XCTAssertEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, false)
+        XCTAssertNotEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, true)
+        let viewport = try await web.evaluateJavaScript("document.querySelector('meta[name=viewport]').content") as! String
+        XCTAssertTrue(viewport.contains("user-scalable=no"))
+        XCTAssertTrue(viewport.contains("maximum-scale=1"))
         _ = try await web.evaluateJavaScript("document.querySelector('[data-at=\"17\"]').click();true")
         try await waitFor(web, "document.querySelector('#score')?.textContent==='50' && document.querySelector('#board')?.getAttribute('aria-busy')==='false'")
         let separateSave = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('imanto-six-game-v1')).board.length") as! Int

@@ -80,14 +80,19 @@ import WebKit
         let json = try await web.evaluateJavaScript("window.removeEventListener('imanto-ad-result',window.imantoAdQAListener);JSON.stringify(window.imantoAdQA.filter(r=>r.requestId==='\(id)'))") as! String
         return try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [[String: Any]]
     }
-    func testBannerReservesSafeAreaAndHidingRestoresTheBoard() async throws {
+    func testBannerUsesSafeAreaWithoutMovingOrResizingTheBoard() async throws {
         let owner = try await controller(), original = owner.ads.provider, fixture = AdFixture(owner)
         owner.ads.provider = fixture
         defer { fixture.setBanner(false, completion: { _ in }); owner.ads.provider = original }
+        let originalFrame = owner.web.frame
+        let boardProbe = "JSON.stringify(document.querySelector('#board').getBoundingClientRect().toJSON())"
+        let originalBoard = try await owner.web.evaluateJavaScript(boardProbe) as! String
         let results = try await send(owner.web, action: "banner", kind: "banner", id: "qa-banner", visible: true)
         XCTAssertEqual(results.last?["shown"] as? Bool, true)
         let banner = try XCTUnwrap(fixture.banner)
-        XCTAssertEqual(owner.web.frame.maxY, banner.frame.minY, accuracy: 1)
+        XCTAssertEqual(owner.web.frame, originalFrame, "The banner overlays trailing space without resizing the viewport")
+        let bannerBoard = try await owner.web.evaluateJavaScript(boardProbe) as! String
+        XCTAssertEqual(bannerBoard, originalBoard, "Ad presentation must not move or shrink the board")
         XCTAssertEqual(banner.frame.maxY, owner.view.safeAreaLayoutGuide.layoutFrame.maxY, accuracy: 1)
         // WKWebView has its own compositor; takeSnapshot avoids a blank GPU backing
         // in UIKit drawHierarchy, then captures the measured native banner below it.
