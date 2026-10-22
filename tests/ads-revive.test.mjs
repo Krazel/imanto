@@ -35,37 +35,38 @@ test('disabled formats prevent provider, network, banner and reward activity',as
   assert.equal(await ads.banner(true),false);assert.equal(calls,0);
   assert.equal(createNativeAdProvider({}),null);
 });
-test('first four games have no banner; first five have no interstitial; first is after sixth',()=>{
-  const s=storage();let c=createAdCadence(s);
-  assert.equal(c.bannerAllowed(),false);assert.equal(c.canPreload(),false);
+test('interstitials follow every two short games, including fast games and relaunches',()=>{
+  const s=storage();let c=createAdCadence(s,{now:()=>1000});
+  assert.equal(c.canPreload(),true);assert.equal(c.due(),false);
   for(let i=1;i<=6;i++){
-    assert.equal(c.finish(`g${i}`),true);assert.equal(c.finish(`g${i}`),false);
-    c=createAdCadence(s);
+    assert.equal(c.finish(`g${i}`,1000),true);assert.equal(c.finish(`g${i}`,600000),false);
+    c=createAdCadence(s,{now:()=>1000});
     assert.equal(c.snapshot().completed,i);assert.equal(c.bannerAllowed(),i>=4);
-    assert.equal(c.canPreload(),i>=5);assert.equal(c.due(),i>5);
+    assert.equal(c.due(),i%2===0);
+    if(c.due())c.shown();
   }
-  c.shown();c=createAdCadence(s);assert.equal(c.snapshot().completed,6);assert.equal(c.snapshot().count,0);assert.equal(c.bannerAllowed(),true);
+  assert.equal(c.snapshot().count,0);
 });
-test('interstitial repeats after three more games and the cooldown survives reopening',()=>{
-  const s=storage();let now=1000000,c=createAdCadence(s,{now:()=>now});
-  for(let i=1;i<=6;i++)c.finish(`g${i}`);c.shown();
-  for(let i=7;i<=9;i++){c.finish(`g${i}`);assert.equal(c.due(),false);}
-  now+=180000;c=createAdCadence(s,{now:()=>now});assert.equal(c.due(),true);
-  c.shown();assert.equal(c.snapshot().completed,9);assert.equal(c.due(),false);
+test('ten minutes of play trigger a single-game interstitial and reset after presentation',()=>{
+  const s=storage();let c=createAdCadence(s);
+  c.finish('short',599999);assert.equal(c.due(),false);
+  c.finish('pair',1);assert.equal(c.due(),true);c.shown();
+  c.finish('long',600000);c=createAdCadence(s);assert.equal(c.due(),true);
+  c.shown();assert.equal(c.due(),false);assert.equal(c.snapshot().longGamePending,false);
+  c.finish('next-long',600001);assert.equal(c.due(),true);
 });
-test('old cadence migrates completed games and malformed or disabled state fails safely',()=>{
-  const s=storage();s.setItem(ADS_SAVE_KEY,JSON.stringify({count:4,lastGame:'old'}));
-  let c=createAdCadence(s);assert.equal(c.snapshot().completed,4);assert.equal(c.bannerAllowed(),true);assert.equal(c.due(),false);
-  c.finish('five');c.finish('six');assert.equal(c.due(),true);
+test('old counters migrate without losing progress; malformed and disabled states fail safely',()=>{
+  const s=storage();s.setItem(ADS_SAVE_KEY,JSON.stringify({count:1,lastGame:'old',lastShown:1000}));
+  let c=createAdCadence(s,{now:()=>1001});assert.equal(c.snapshot().completed,1);assert.equal(c.due(),false);
+  c.finish('second');assert.equal(c.due(),true);
   c=createAdCadence(s,{config:{...ADS_CONFIG,banner:false,interstitial:false}});assert.equal(c.due(),false);assert.equal(c.bannerAllowed(),false);
   s.setItem(ADS_SAVE_KEY,JSON.stringify({count:-3,completed:'bad'}));assert.equal(createAdCadence(s).snapshot().completed,0);
 });
-test('failed or unavailable ads preserve the pending counter; a reward delays rather than erases it',()=>{
-  const s=storage();let now=1000000;let c=createAdCadence(s,{now:()=>now});
-  for(let i=0;i<6;i++)c.finish(`g${i}`);assert.equal(c.due(),true);
-  c=createAdCadence(s,{now:()=>now});assert.equal(c.snapshot().count,6);assert.equal(c.due(),true);
-  c.noteFullscreen();assert.equal(c.due(),false);assert.equal(c.snapshot().count,6);
-  now+=180000;assert.equal(c.due(),true);
+test('unavailable ads and voluntary video do not erase or time-block a pending interstitial',()=>{
+  const s=storage();let c=createAdCadence(s,{now:()=>1000});
+  c.finish('one');c.finish('two');assert.equal(c.due(),true);
+  c=createAdCadence(s,{now:()=>1000});assert.equal(c.snapshot().count,2);
+  c.noteFullscreen();assert.equal(c.due(),true);assert.equal(c.snapshot().count,2);
 });
 test('cached-only availability never initiates a load and absent inventory is skipped',async()=>{
   let loaded=0;const provider={available:()=>false,ready:()=>{loaded++;return true;}};

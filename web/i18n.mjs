@@ -153,6 +153,7 @@ Object.assign(EN,{
   'Máximo: una retirada y un revivir por partida.':'Maximum: one removal and one revive per game.',
   'Encadena combos':'Keep your combo going'
 });
+Object.assign(EN,{"Eliminar un bloque · ver anuncio": "Remove a block · watch an ad", "Eliminar un bloque · usar saldo": "Remove a block · use balance", "Cuando pierdas, elimina un bloque del tablero para hacer espacio.": "When you lose, remove one block from the board to make space.", "Usa una retirada de tu saldo o mira un anuncio voluntario.": "Use one removal from your balance or watch an optional ad.", "Un solo bloque por partida, también en el plan ilimitado.": "Only one block per game, including the unlimited plan.", "Solo puedes eliminar un bloque al perder, una vez por partida.": "Remove one block after losing, once per game.", "Te quedan {n} bloques para eliminar al perder · uno por partida": "You have {n} blocks left to remove after losing · one per game", "Juega sin anuncios": "Play without ads", "Puedes quitar el banner y los anuncios entre partidas con una suscripción.": "A subscription removes banners and ads between games.", "Ver suscripciones": "View subscriptions", "Ahora no": "Not now", "Cerrar": "Close", "Quitar anuncios": "Remove ads"});
 export function resolveLanguage({override,preference='auto',languages=[]}={}){
   if(override==='en'||override==='es')return override;
   if(preference==='en'||preference==='es')return preference;

@@ -15,9 +15,9 @@ struct MembershipConfiguration {
     let plans: [MembershipPlan] = [
         .init(productID: "com.krazel.imanto.monthly10", monthlyRemovals: 10, unlimited: false, dailyRevives: 0),
         .init(productID: "com.krazel.imanto.monthly20", monthlyRemovals: 20, unlimited: false, dailyRevives: 0),
-        .init(productID: "com.krazel.imanto.monthly50", monthlyRemovals: 50, unlimited: false, dailyRevives: 1),
-        .init(productID: "com.krazel.imanto.monthly80", monthlyRemovals: 80, unlimited: false, dailyRevives: 5),
-        .init(productID: "com.krazel.imanto.unlimited", monthlyRemovals: nil, unlimited: true, dailyRevives: nil)
+        .init(productID: "com.krazel.imanto.monthly50", monthlyRemovals: 50, unlimited: false, dailyRevives: 0),
+        .init(productID: "com.krazel.imanto.monthly80", monthlyRemovals: 80, unlimited: false, dailyRevives: 0),
+        .init(productID: "com.krazel.imanto.unlimited", monthlyRemovals: nil, unlimited: true, dailyRevives: 0)
     ]
 }
 struct MembershipWalletSnapshot { let balance: Int; let revivesRemaining: Int }
@@ -114,7 +114,7 @@ struct MembershipClaim { let gameID: String; let receipt: String }
             return ["id": product.id, "name": product.displayName, "price": product.displayPrice, "monthlyRemovals": plan.monthlyRemovals ?? 0, "unlimited": plan.unlimited, "dailyRevives": plan.dailyRevives ?? -1]
         }
         return ["resolved": resolved, "available": config.enabled && resolved && walletReady && !catalogue.isEmpty,
-                "active": active, "unlimited": active && unlimited, "balance": balance, "revivesRemaining": revivesRemaining, "unlimitedRevives": active && unlimited && walletReady, "products": catalogue]
+                "active": active, "unlimited": active && unlimited, "balance": balance, "revivesRemaining": revivesRemaining, "unlimitedRevives": false, "products": catalogue]
     }
     private func emit(_ values: [String: Any], event: String) {
         guard let data = try? JSONSerialization.data(withJSONObject: values),

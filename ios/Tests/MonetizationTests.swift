@@ -11,10 +11,10 @@ import WebKit
         began = true
         if delay > 0 { try await Task.sleep(nanoseconds: delay) }
         finished = true
-        return MembershipWalletSnapshot(balance: 10, revivesRemaining: claims.isEmpty ? 1 : 0)
+        return MembershipWalletSnapshot(balance: 10, revivesRemaining: 0)
     }
     func claim(gameID: String, kind: String) async throws -> MembershipClaim? {
-        guard kind == "revive" else { return nil }
+        guard kind == "remove" else { return nil }
         let key = gameID + ":" + kind
         claims.insert(key)
         return MembershipClaim(gameID: gameID, receipt: key)
@@ -38,18 +38,28 @@ import WebKit
         await first.value
         XCTAssertFalse(controller.subscriptions.suppressAutomaticAds)
     }
-    func testLocalBenefitsPersistAndKeepSeparateGameAllowances() throws {
+    func testLocalBenefitsPersistAndShareOneRemoval() throws {
         let plan = MembershipConfiguration().plans[2]
         let now = Date(timeIntervalSince1970: 1_792_319_400)
         var state = LocalBenefitsState()
         let removal = try XCTUnwrap(LocalBenefitsPolicy.claim(state: &state, gameID: "game", kind: "remove", balance: 50, plan: plan, now: now))
         let revive = try XCTUnwrap(LocalBenefitsPolicy.claim(state: &state, gameID: "game", kind: "revive", balance: 49, plan: plan, now: now))
-        XCTAssertEqual(state.debits, 1); XCTAssertEqual(state.usedRevives, 1)
+        XCTAssertEqual(removal.receipt, revive.receipt)
+        XCTAssertEqual(state.debits, 1); XCTAssertEqual(state.usedRevives, 0)
         state = try JSONDecoder().decode(LocalBenefitsState.self, from: JSONEncoder().encode(state))
         XCTAssertEqual(LocalBenefitsPolicy.claim(state: &state, gameID: "game", kind: "remove", balance: 49, plan: plan, now: now)?.receipt, removal.receipt)
         XCTAssertEqual(LocalBenefitsPolicy.claim(state: &state, gameID: "game", kind: "revive", balance: 49, plan: plan, now: now)?.receipt, revive.receipt)
-        XCTAssertNil(LocalBenefitsPolicy.claim(state: &state, gameID: "other", kind: "revive", balance: 49, plan: plan, now: now))
+        XCTAssertNotNil(LocalBenefitsPolicy.claim(state: &state, gameID: "other", kind: "remove", balance: 49, plan: plan, now: now))
         XCTAssertNotNil(LocalBenefitsPolicy.claim(state: &state, gameID: "tomorrow", kind: "revive", balance: 49, plan: plan, now: now.addingTimeInterval(86400)))
+    }
+    func testLegacyReceiptRecoversAtZeroBalanceWithoutSecondDebit() {
+        var state = LocalBenefitsState()
+        state.claims["revive:old-game"] = "existing-receipt"
+        state.debits = 3
+        let receipt = LocalBenefitsPolicy.claim(state: &state, gameID: "old-game", kind: "remove", balance: 0, plan: nil, now: Date())
+        XCTAssertEqual(receipt?.receipt, "existing-receipt")
+        XCTAssertEqual(state.debits, 3)
+        XCTAssertNil(LocalBenefitsPolicy.claim(state: &state, gameID: "new-game", kind: "remove", balance: 0, plan: nil, now: Date()))
     }
     func testLocalUpgradeRenewalAndRefundBalance() {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
@@ -62,14 +72,14 @@ import WebKit
         XCTAssertEqual(LocalBenefitsPolicy.balance(periods: periods, debits: 7), 93)
         XCTAssertEqual(LocalBenefitsPolicy.balance(periods: periods, debits: 200), 0)
     }
-    func testLocalDailyLimitsByTierAndUnlimitedDoesNotSpendBank() {
+    func testAllPlansUseBalanceAndUnlimitedDoesNotSpendBank() {
         let now = Date()
-        for (index, plan) in MembershipConfiguration().plans.enumerated() {
+        for plan in MembershipConfiguration().plans {
             var state = LocalBenefitsState()
-            let expected = [0, 0, 1, 5, 10][index]
+            let expected = 10
             var granted = 0
             for game in 0..<10 {
-                if LocalBenefitsPolicy.claim(state: &state, gameID: String(game), kind: "revive", balance: 10, plan: plan, now: now) != nil { granted += 1 }
+                if LocalBenefitsPolicy.claim(state: &state, gameID: String(game), kind: "remove", balance: max(0, 10 - state.debits), plan: plan, now: now) != nil { granted += 1 }
             }
             XCTAssertEqual(granted, expected)
         }
@@ -77,7 +87,7 @@ import WebKit
         XCTAssertNotNil(LocalBenefitsPolicy.claim(state: &state, gameID: "game", kind: "remove", balance: 0, plan: MembershipConfiguration().plans[4], now: now))
         XCTAssertEqual(state.debits, 0)
     }
-    func testIncludedReviveAndReadableSubscriptionCopy() async throws {
+    func testPaidBlockRemovalAndReadableSubscriptionCopy() async throws {
         let controller = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         let web = try XCTUnwrap(controller.web)
         let originalScripts = web.configuration.userContentController.userScripts
@@ -94,7 +104,7 @@ import WebKit
             if let value = try? await web.evaluateJavaScript("window.imantoReviveTest===true && document.querySelector('#menu')?.open && !document.querySelector('#paid-revive').hidden"), value as? Bool == true { ready = true; break }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
-        XCTAssertTrue(ready, "Included revive must become available through the native wallet bridge")
+        XCTAssertTrue(ready, "Paid removal must become available through the native wallet bridge")
         guard ready else { return }
         let resultImage: UIImage = try await withCheckedThrowingContinuation { continuation in
             web.takeSnapshot(with: nil) { image, error in
@@ -125,6 +135,7 @@ import WebKit
         let text = try await web.evaluateJavaScript("document.querySelector('#membership').textContent") as! String
         XCTAssertFalse(text.contains("Retiradas de fichas cada mes"))
         XCTAssertTrue(text.contains("hacer espacio") || text.contains("make space"))
+        XCTAssertFalse(text.lowercased().contains("reviv"))
         let image: UIImage = try await withCheckedThrowingContinuation { continuation in
             web.takeSnapshot(with: nil) { image, error in
                 if let image = image { continuation.resume(returning: image) }

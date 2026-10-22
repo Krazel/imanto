@@ -43,27 +43,27 @@ test('cancelled and pending purchases do not grant a benefit; restore reads auth
   assert.equal((await member.purchase('test.product')).reason,'cancelled');assert.equal((await member.purchase('test.product')).reason,'pending');
   await member.restore();await member.restore();assert.equal(restores,2);assert.equal(member.snapshot().balance,0);assert.equal(member.snapshot().active,false);
 });
-test('monthly block removal is available during play and has its own once-per-game limit',()=>{
-  const original={...createGame(),gameId:'game'};
+test('monthly removal requires defeat and shares the one-per-game limit',()=>{
+  const original={...createGame(),gameId:'game',over:true,endReason:'no-lines'};
   const pending=beginCreditRemoval(original);assert.equal(blockRemovalStatus(pending),'pending');
   const earned=settleCreditRemoval(pending,{ok:true,gameId:'game',receipt:'receipt'});
   const at=earned.board.findIndex(Boolean),removed=removeForCredit(earned,at);
   assert.equal(removed.board.filter(Boolean).length,original.board.filter(Boolean).length-1);
   for(const field of ['score','turns','round','tray','nextTray','combo'])assert.deepEqual(removed[field],original[field]);
   assert.ok(isValidSave(removed));assert.throws(()=>beginCreditRemoval(removed));
-  assert.equal(beginRevive({...removed,over:true}).revive,'pending');
-  assert.throws(()=>beginCreditRemoval({...original,over:true}));
+  assert.throws(()=>beginRevive({...removed,over:true}));
+  assert.throws(()=>beginCreditRemoval({...original,over:false}));
 });
 
 test('interrupted block claim stays pending on reload and only its correlated receipt authorizes removal',()=>{
-  let state=restoreGame(beginCreditRemoval({...createGame(),gameId:'game'}));assert.equal(blockRemovalStatus(state),'pending');
+  let state=restoreGame(beginCreditRemoval({...createGame(),gameId:'game',over:true,endReason:'no-lines'}));assert.equal(blockRemovalStatus(state),'pending');
   assert.equal(settleCreditRemoval(state,{ok:false}),state);assert.equal(settleCreditRemoval(state,{ok:true,gameId:'other',receipt:'x'}),state);
   state=settleCreditRemoval(state,{ok:true,gameId:'game',receipt:'x'});assert.equal(restoreGame(state).blockRemoval,'earned');
-  const used=removeForCredit(state,state.board.findIndex(Boolean));assert.equal(restoreGame(used).blockRemoval,'used');assert.equal(used.revive,'available');
+  const used=removeForCredit(state,state.board.findIndex(Boolean));assert.equal(restoreGame(used).blockRemoval,'used');assert.equal(used.revive,'used');
 });
 
-test('one paid or video revive is allowed per game independently of the monthly block helper',()=>{
-  const state={...createGame(),gameId:'game',revive:'used'};assert.equal(beginCreditRemoval(state).blockRemoval,'pending');
+test('paid and video removals share the same one-per-game limit',()=>{
+  const state={...createGame(),gameId:'game',revive:'used'};assert.throws(()=>beginCreditRemoval({...state,over:true}));
   assert.throws(()=>beginPaidRevive({...state,over:true}));assert.throws(()=>beginRevive({...state,over:true}));
 });
 

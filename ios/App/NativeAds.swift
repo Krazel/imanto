@@ -266,6 +266,10 @@ struct AdUnitIDs {
             banner.load(self.request())
         }
     }
+    func bannerViewDidRecordImpression(_ bannerView: BannerView) {
+        guard bannerView === banner, bannerWanted else { return }
+        owner?.web.evaluateJavaScript("window.dispatchEvent(new Event('imanto-banner-impression'))", completionHandler: nil)
+    }
     func bannerViewDidReceiveAd(_ bannerView: BannerView) {
         guard bannerView === banner else { bannerView.removeFromSuperview(); return }
         guard bannerWanted, owner?.subscriptions.suppressAutomaticAds != true else {

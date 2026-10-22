@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fff7eb"><title>Imanto · Acabados</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="block-lab.css">
+</head>
+<body>
+  <main>
+    <header><a class="back" href="./">‹ Imanto</a><a class="six-link" href="./six-lab/index.html" data-text="sixLink">Probar tablero 6×6</a><div class="languages" aria-label="Language"><button data-lang="es" lang="es">ES</button><button data-lang="en" lang="en">EN</button></div></header>
+    <section class="intro"><p class="eyebrow" data-text="eyebrow">IMANTO · MATERIALES</p><h1 data-text="title">El mismo bloque. Cinco acabados.</h1><p data-text="intro">Cambia la superficie y pruébala con el movimiento Elástico que elegiste.</p></section>
+    <section class="palette-panel" aria-label="Paletas / Palettes">
+      <h2 data-text="palettes">Elige una paleta</h2><p data-text="paletteNote">Tres colores al empezar. El cuarto entra desde la tanda 4.</p>
+      <div id="palettes" class="palette-list"></div>
+      <div class="palette-controls"><div class="stage-controls"><button data-stage="3" data-text="startStage">Inicio · 3 colores</button><button data-stage="4" data-text="laterStage">Desde tanda 4 · 4 colores</button></div>
+      <div class="random-controls"><span class="random-label" data-text="random">Al azar entre partidas</span><button id="new-preview" data-text="newGame">Simular nueva partida</button></div></div>
+      <p data-text="paletteRule">La paleta se mantiene durante toda la partida. Aquí puedes cambiarla para comparar.</p>
+      <small data-text="sessionOnly">Solo vista previa: no cambia tu partida ni tus ajustes.</small>
+    </section>
+    <p class="sound-jump"><a href="?sounds=1&lang=es" id="sound-lab-link">♪ Probar sonidos de línea</a></p>
+    <div class="workspace">
+      <section id="line-sounds" class="line-sounds" aria-labelledby="line-sounds-title"><h2 id="line-sounds-title"></h2><p id="line-sounds-note"></p><div id="line-sound-list"></div><p id="audition-status" role="status" aria-live="polite"></p><button id="stop-audition" type="button"></button><p class="sound-credit">Kenney · CC0 · <a href="https://kenney.nl/assets/music-jingles" target="_blank" rel="noopener">Music Jingles</a> / <a href="https://kenney.nl/assets/interface-sounds" target="_blank" rel="noopener">Interface Sounds</a></p></section>
+      <section class="materials" aria-label="Acabados"><div class="section-label"><h2 data-text="choose">Elige una familia</h2><span>01 — 05</span></div><div id="finishes" class="finish-list"></div><p class="material-note" data-text="materialNote">Misma forma. Combina cada material con una paleta completa.</p></section>
+      <section id="version-panel" class="version-panel"><h3 id="version-title"></h3><div id="versions" class="version-list"></div><p id="version-note"></p></section>
+      <section id="preview" class="preview" data-finish="current" aria-label="Vista previa">
+        <div class="preview-head"><div><span class="eyebrow" data-text="preview">VISTA PREVIA</span><h2 id="active-name">Actual</h2><p id="palette-name" class="palette-name"></p></div><span class="proposal" id="proposal">Referencia</span></div>
+        <div id="board" class="board" aria-hidden="true"><div id="grid" class="grid"></div><div id="fx" class="fx"></div><div id="reward" class="reward">+50</div></div>
+        <div class="tray-section"><p id="trial-color-label">Color de la prueba</p><div id="tray" class="tray"></div></div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+        <div class="actions"><button data-action="place" data-text="place">Colocar</button><button data-action="line" data-text="line">Completar línea</button><button data-action="sequence" data-text="sequence">▶ Secuencia</button></div>
+        <div class="audio"><button id="sound" aria-pressed="true"><span aria-hidden="true">♪</span> <span id="sound-label">Sonido activado</span></button><label for="volume" data-text="volume">Volumen</label><input id="volume" type="range" min="0" max="100" value="65"></div>
+        <p id="audio-status" class="audio-status" role="status"></p>
+      </section>
+    </div>
+    <footer><p data-text="footer">Son pruebas de acabado: todavía no hay ninguna elección nueva guardada.</p><p data-text="soundNote">Misma animación y mismos sonidos en todas las opciones.</p></footer>
+    <noscript>Activa JavaScript para probar los acabados. / Enable JavaScript to try the finishes.</noscript>
+  </main>
+  <script type="module" src="block-lab.mjs"></script>
+</body>
+</html>

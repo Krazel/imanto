@@ -31,7 +31,7 @@ import AVFoundation
     func testBundledAudioAndMutePolicy() {
         let audio = NativeAudio()
         XCTAssertNil(audio.lastError)
-        XCTAssertEqual(Set(audio.pools.keys), Set(["button", "place", "move", "line"]))
+        XCTAssertEqual(Set(audio.pools.keys), Set(["button", "place", "place-0", "place-1", "place-3", "place-4", "move", "line"]))
         XCTAssertTrue(audio.pools.values.allSatisfy { $0.count == 3 && $0.allSatisfy { $0.duration > 0 } })
         XCTAssertEqual(AVAudioSession.sharedInstance().category, .playback)
         XCTAssertGreaterThan(audio.music?.duration ?? 0, 200)

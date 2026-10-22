@@ -29,10 +29,10 @@ export function createGame(random=Math.random,opening={}){
   }
   state.tray=drawHand(state,1,random);state.nextTray=drawHand(state,2,random);return state;
 }
-export const reviveStatus=state=>state.revive??'available';
+export const reviveStatus=state=>state.blockRemoval==='used'?'used':['pending','earned'].includes(state.blockRemoval)?'pending':(state.revive??'available');
 export const blockRemovalStatus=state=>state.blockRemoval??'available';
 export function beginCreditRemoval(state){
-  if(state.over||blockRemovalStatus(state)!=='available'||!state.gameId||!state.board.some(Boolean))throw Error('Removal unavailable');
+  if(!state.over||reviveStatus(state)!=='available'||blockRemovalStatus(state)!=='available'||!state.gameId||!state.board.some(Boolean))throw Error('Removal unavailable');
   return {...state,blockRemoval:'pending'};
 }
 export function settleCreditRemoval(state,claim){
@@ -45,7 +45,7 @@ export function settleCreditRemoval(state,claim){
 }
 export function removeForCredit(state,at){
   if(blockRemovalStatus(state)!=='earned'||!Number.isInteger(at)||!state.board[at])throw Error('Removal unavailable');
-  const board=clone(state.board);board[at]=null;return {...state,board,over:false,endReason:null,blockRemoval:'used'};
+  const board=clone(state.board);board[at]=null;return {...state,board,over:false,endReason:null,blockRemoval:'used',revive:'used'};
 }
 export function beginPaidRevive(state){
   if(!state.over||reviveStatus(state)!=='available'||!state.gameId)throw Error('Revive unavailable');
@@ -69,7 +69,7 @@ export function removeForRevive(state,at){
   if(!state.over||reviveStatus(state)!=='earned'||!Number.isInteger(at)||!state.board[at])throw Error('Revive removal unavailable');
   const board=clone(state.board);board[at]=null;
   // No pulse, extra hand, points, turn or combo reward: remove exactly one tile.
-  return {...state,board,over:false,endReason:null,revive:'used'};
+  return {...state,board,over:false,endReason:null,revive:'used',blockRemoval:'used'};
 }
 export function completedLines(board){
   const lines=[];

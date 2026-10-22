@@ -7,6 +7,7 @@ import WebKit
     func testAuxiliaryScreensKeepNavigationSettingsAndLayout() async throws {
         let owner = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window?.rootViewController as? GameController)
         let web = try XCTUnwrap(owner.web)
+        XCTAssertEqual(web.scrollView.pinchGestureRecognizer?.isEnabled, false)
         // A previous score fixture restores its saved state by reloading the web view.
         try await Task.sleep(nanoseconds: 300_000_000)
         let originalScripts = web.configuration.userContentController.userScripts
@@ -21,6 +22,20 @@ import WebKit
             try await Task.sleep(nanoseconds: 100_000_000)
         }
         XCTAssertTrue(ready); guard ready else { return }
+        let material = try await web.evaluateJavaScript("document.documentElement.dataset.blockMaterial") as! String
+        XCTAssertEqual(material, "jelly", "Existing games begin with the selected clean jelly")
+        let jellyOverlay = try await web.evaluateJavaScript("getComputedStyle(document.querySelector('.tile'),'::after').content") as! String
+        XCTAssertEqual(jellyOverlay, "none", "Clean jelly has no circles or lower oval")
+        let materialCSS = try await web.evaluateJavaScript("getComputedStyle(document.querySelector('.tile')).backgroundImage") as! String
+        XCTAssertTrue(materialCSS.contains("gradient"), "The approved surface must be bundled in WKWebView")
+        let originalBounds = web.bounds
+        let layoutProbe = "JSON.stringify(['.heading','#score','#board','#tray','.forecast'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return [r.x,r.y,r.width,r.height]}))"
+        let beforeBanner = try await web.evaluateJavaScript(layoutProbe) as! String
+        owner.reserveBannerHeight(90)
+        let afterBanner = try await web.evaluateJavaScript(layoutProbe) as! String
+        XCTAssertEqual(web.bounds, originalBounds, "A banner must not resize the web viewport")
+        XCTAssertEqual(afterBanner, beforeBanner, "Banner reservation must not shift or shrink the game")
+        owner.reserveBannerHeight(0)
         _ = try await web.evaluateJavaScript("document.querySelectorAll('dialog[open]').forEach(d=>d.close());document.querySelector('#pause').click();true")
         try await verifyAndCapture(web, id: "menu", name: "pause")
         let size = try await web.evaluateJavaScript("parseFloat(getComputedStyle(document.querySelector('#menu-score')).fontSize)") as! Double

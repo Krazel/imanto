@@ -20,8 +20,13 @@ final class GameController: UIViewController, WKNavigationDelegate {
     var haptics: NativeHaptics!
     var ads: NativeAds!
     var subscriptions: NativeSubscriptions!
-    private var webBottom: NSLayoutConstraint!
-    func reserveBannerHeight(_ height: CGFloat) { webBottom.constant = -max(0, height); view.layoutIfNeeded() }
+    private var bannerHeight: CGFloat = 0
+    func reserveBannerHeight(_ height: CGFloat) {
+        bannerHeight = height.isFinite ? max(0, height) : 0
+        // Add only trailing scroll space; keep viewport height and board position intact.
+        let script = "document.documentElement.style.setProperty('--imanto-banner-height','\(bannerHeight)px');document.documentElement.toggleAttribute('data-banner-visible',\(bannerHeight > 0 ? "true" : "false"));"
+        web?.evaluateJavaScript(script, completionHandler: nil)
+    }
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 1, green: 0.969, blue: 0.922, alpha: 1)
@@ -54,16 +59,16 @@ final class GameController: UIViewController, WKNavigationDelegate {
         web.scrollView.backgroundColor = view.backgroundColor
         web.scrollView.contentInsetAdjustmentBehavior = .never
         web.scrollView.bounces = false
+        web.scrollView.pinchGestureRecognizer?.isEnabled = false
         web.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(web)
-        webBottom = web.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         subscriptions.start()
         // Keep the entire game and dialogs inside the actual device safe area.
         NSLayoutConstraint.activate([
             web.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             web.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             web.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            webBottom
+            web.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
         if let root = Bundle.main.url(forResource: "Web", withExtension: nil) {
             web.loadFileURL(root.appendingPathComponent("index.html"), allowingReadAccessTo: root)
@@ -90,11 +95,11 @@ final class GameController: UIViewController, WKNavigationDelegate {
             subscriptions.receive(body)
         }
     }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true; ads.initializeOnLaunch() }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { navigationReady = true; reserveBannerHeight(bannerHeight); webView.scrollView.pinchGestureRecognizer?.isEnabled = false; ads.initializeOnLaunch() }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
-    @objc private func suspend() { haptics.active = false; audio.active = false; audio.pause() }
-    @objc private func resume() { haptics.active = !ads.fullscreenPresenting; audio.active = !ads.fullscreenPresenting; audio.reconcile(); ads.initializeOnLaunch(resetRetries: true); Task { await subscriptions.refresh() } }
+    @objc private func suspend() { web?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('imanto-app-active',{detail:false}))", completionHandler: nil); haptics.active = false; audio.active = false; audio.pause() }
+    @objc private func resume() { web?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('imanto-app-active',{detail:true}))", completionHandler: nil); haptics.active = !ads.fullscreenPresenting; audio.active = !ads.fullscreenPresenting; audio.reconcile(); ads.initializeOnLaunch(resetRetries: true); Task { await subscriptions.refresh() } }
     @objc private func interrupted(_ notification: Notification) {
         guard let number = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: number) else { return }
@@ -126,11 +131,13 @@ final class NativeAudio {
     init() {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            for cue in ["button", "place", "move", "line"] {
-                guard let url = Bundle.main.url(forResource: cue, withExtension: "wav", subdirectory: "Audio") else { throw CocoaError(.fileNoSuchFile) }
+            var recordings = ["button":"button", "place":"place-spring-2", "move":"move", "line":"line-win"]
+            for index in [0, 1, 3, 4] { recordings["place-\(index)"] = "place-spring-\(index)" }
+            for (cue, resource) in recordings {
+                guard let url = Bundle.main.url(forResource: resource, withExtension: "wav", subdirectory: "Audio") else { throw CocoaError(.fileNoSuchFile) }
                 pools[cue] = try (0..<3).map { _ in let p = try AVAudioPlayer(contentsOf: url); p.prepareToPlay(); return p }
             }
-            guard let url = Bundle.main.url(forResource: "carefree", withExtension: "mp3", subdirectory: "Audio") else { throw CocoaError(.fileNoSuchFile) }
+            guard let url = Bundle.main.url(forResource: "meditation-impromptu-01", withExtension: "mp3", subdirectory: "Audio") else { throw CocoaError(.fileNoSuchFile) }
             music = try AVAudioPlayer(contentsOf: url)
             music?.numberOfLoops = -1
             music?.prepareToPlay()
@@ -149,7 +156,10 @@ final class NativeAudio {
             reconcile()
         case "effect":
             guard active, visible, unlocked, effects, effectsVolume > 0,
-                  let cue = body["cue"] as? String, let player = pools[cue]?.first(where: { !$0.isPlaying }) else { return }
+                  let cue = body["cue"] as? String, ["button", "place", "move", "line"].contains(cue) else { return }
+            let variation = body["variation"] as? Int ?? 2
+            let key = cue == "place" && [0, 1, 3, 4].contains(variation) ? "place-\(variation)" : cue
+            guard let player = pools[key]?.first(where: { !$0.isPlaying }) else { return }
             do {
                 try AVAudioSession.sharedInstance().setActive(true)
                 player.volume = effectsVolume; player.currentTime = 0; player.play()

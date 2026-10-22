@@ -37,18 +37,12 @@ struct LocalBenefitsPolicy {
     static func claim(state: inout LocalBenefitsState, gameID: String, kind: String,
                       balance: Int, plan: MembershipPlan?, now: Date) -> MembershipClaim? {
         guard !gameID.isEmpty, gameID.count <= 100, ["remove", "revive"].contains(kind) else { return nil }
-        let key = kind + ":" + gameID
-        if let receipt = state.claims[key] { return MembershipClaim(gameID: gameID, receipt: receipt) }
-        let today = day(now)
-        if state.day != today { state.day = today; state.usedRevives = 0 }
-        if kind == "remove" {
-            guard plan?.unlimited == true || balance > 0 else { return nil }
-            if plan?.unlimited != true { state.debits += 1 }
-        } else {
-            guard let plan = plan else { return nil }
-            if let limit = plan.dailyRevives, state.usedRevives >= limit { return nil }
-            state.usedRevives += 1
+        let key = "remove:" + gameID
+        if let receipt = state.claims[key] ?? state.claims["revive:" + gameID] {
+            return MembershipClaim(gameID: gameID, receipt: receipt)
         }
+        guard plan?.unlimited == true || balance > 0 else { return nil }
+        if plan?.unlimited != true { state.debits += 1 }
         let receipt = UUID().uuidString; state.claims[key] = receipt
         return MembershipClaim(gameID: gameID, receipt: receipt)
     }
@@ -92,7 +86,7 @@ struct LocalBenefitsPolicy {
         let today = LocalBenefitsPolicy.day(Date())
         if state.day != today { state.day = today; state.usedRevives = 0 }
         persist()
-        let remaining = currentPlan.map { max(0, ($0.dailyRevives ?? 0) - state.usedRevives) } ?? 0
+        let remaining = 0 // Legacy snapshot field; no separate daily allowance.
         return MembershipWalletSnapshot(balance: LocalBenefitsPolicy.balance(periods: periods, debits: state.debits), revivesRemaining: remaining)
     }
     func claim(gameID: String, kind: String) async throws -> MembershipClaim? {

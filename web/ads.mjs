@@ -1,17 +1,17 @@
 // Release defaults. These cannot be enabled by a URL, storage or native message.
-export const ADS_CONFIG=Object.freeze({banner:true,interstitial:true,rewarded:true,bannerFreeGames:4,interstitialFreeGames:5,gamesPerInterstitial:3,minIntervalMs:180000});
+export const ADS_CONFIG=Object.freeze({banner:true,interstitial:true,rewarded:true,bannerFreeGames:4,interstitialFreeGames:0,gamesPerInterstitial:2,longGameMs:600000});
 export const ADS_SAVE_KEY='krazel-imanto-ad-cadence-v1';
 export function createAdCadence(storage,{now=Date.now,config=ADS_CONFIG}={}){
   let saved;try{saved=JSON.parse(storage.getItem(ADS_SAVE_KEY));}catch{}
   const count=Number.isSafeInteger(saved?.count)&&saved.count>=0?saved.count:0;
-  const data={count,completed:Number.isSafeInteger(saved?.completed)&&saved.completed>=count?saved.completed:count,lastGame:typeof saved?.lastGame==='string'?saved.lastGame:null,lastShown:Number.isFinite(saved?.lastShown)?saved.lastShown:0};
+  const data={count,completed:Number.isSafeInteger(saved?.completed)&&saved.completed>=count?saved.completed:count,lastGame:typeof saved?.lastGame==='string'?saved.lastGame:null,lastShown:Number.isFinite(saved?.lastShown)?saved.lastShown:0,longGamePending:saved?.longGamePending===true};
   const save=()=>{try{storage.setItem(ADS_SAVE_KEY,JSON.stringify(data));}catch{}};
   return {
-    finish(gameId){if(typeof gameId!=='string'||!gameId||data.lastGame===gameId)return false;data.lastGame=gameId;data.count++;data.completed++;save();return true;},
+    finish(gameId,playedMs=0){if(typeof gameId!=='string'||!gameId||data.lastGame===gameId)return false;data.lastGame=gameId;data.count++;data.completed++;data.longGamePending ||= Number.isFinite(playedMs)&&playedMs>=config.longGameMs;save();return true;},
     bannerAllowed:()=>config.banner===true&&data.completed>=config.bannerFreeGames,
     canPreload:()=>config.interstitial===true&&data.completed>=config.interstitialFreeGames,
-    due(){return config.interstitial&&data.completed>config.interstitialFreeGames&&data.count>=config.gamesPerInterstitial&&(!data.lastShown||now()-data.lastShown>=config.minIntervalMs);},
-    shown(){data.count=0;data.lastShown=now();save();},
+    due(){return config.interstitial&&data.completed>config.interstitialFreeGames&&(data.count>=config.gamesPerInterstitial||data.longGamePending);},
+    shown(){data.count=0;data.longGamePending=false;data.lastShown=now();save();},
     noteFullscreen(){data.lastShown=now();save();},
     snapshot:()=>({...data})
   };

@@ -1,0 +1,15 @@
+Imanto · Elástico · 21 October 2026
+Placement: bookPlace1, Kenney Vleugels, RPG Audio, CC0 1.0.
+https://kenney.nl/assets/rpg-audio
+User approved Elástico placement and requested small random pitch changes.
+Five prerecorded variants: -0.7, -0.35, 0, +0.35, +0.7 semitones.
+Original volume retained. Center variant is the exact approved recording.
+
+Line: Acierto breve / Quick success (option 5), Kenney, Interface Sounds, CC0 1.0.
+https://kenney.nl/assets/interface-sounds
+Original: confirmation_001.ogg; exact existing Studio WAV (sopa-word).
+SHA256: 32734cedd11f49462f89d71d1913bbe651c66a7d0db4e5971d1eccfc6fd3aa56.
+User selected provisionally on 22 October 2026: "quedemonos con el 5 de momento".
+No new processing. Local web and native source resources use identical bytes.
+Selection: design/line-sounds-2026-10-22/selected-5.json.
+Placement provenance: design/feel-spring-approved-2026-10-21/audio-manifest.json.

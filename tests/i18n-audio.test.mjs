@@ -20,8 +20,9 @@ test('English translations preserve every interpolation parameter and required g
   assert.equal(t('Fila {row}, columna {col}, {tile}',{row:2,col:4,tile:'teal'}),'Row 2, column 4, teal');
   assert.equal(t('Fin de la partida'),'Game over');
 });
-test('audio settings begin with optional music off and clamp invalid persisted volumes',()=>{
-  assert.deepEqual(normalizeAudioSettings(null),{effects:true,music:false,effectsVolume:.7,musicVolume:.15});
+test('audio settings begin with music on, respect explicit mute and clamp invalid persisted volumes',()=>{
+  assert.deepEqual(normalizeAudioSettings(null),{effects:true,music:true,effectsVolume:.7,musicVolume:.15});
   assert.deepEqual(normalizeAudioSettings({effects:false,music:true,effectsVolume:7,musicVolume:-1}),{effects:false,music:true,effectsVolume:1,musicVolume:0});
-  assert.equal(normalizeAudioSettings({music:'yes',effectsVolume:NaN}).music,false);
+  assert.equal(normalizeAudioSettings({music:'yes',effectsVolume:NaN}).music,true);
+  assert.equal(normalizeAudioSettings({music:false}).music,false);
 });

@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-21",
+  "status": "Experimental web only; not in native bundle",
+  "size": 6,
+  "source": {
+    "engine": "9825c51f1a6e494c032a0137142f6b5ca68295a86ca88eaf1b8ec1b126c7840e",
+    "physics": "e76a0d165e3b4b8acb85bad6274f988fcdc2e98f52db150c2dc2917c67806306",
+    "search": "5915f3c98be70077440f6dbdf5e4e6325b9c3fc325e5cb2229085c1e6949339d"
+  },
+  "adaptation": "Isolated snapshots: 36-cell topology, 6-cell monochrome lines, BigInt search masks. Shared combo module. Real 5x5 untouched.",
+  "storageKey": "imanto-six-trial-v1",
+  "palette": "Random each new game; stable within game",
+  "lossSearch": "Worker with 1800 ms soft budget; timeout is unknown and never declares loss. Proven no-lines result ends game.",
+  "tests": "7 Node passed; IAB36cells,line50,corner35/save reload,390px no overflow, no console errors; physical drag/iPhone not checked"
+}

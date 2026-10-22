@@ -23,6 +23,16 @@
 .win-glint{position:absolute;left:var(--origin-x);top:var(--origin-y);width:11px;height:11px;background:#fff8da;box-shadow:0 0 12px #ffd36c;clip-path:polygon(50% 0,63% 36%,100% 50%,63% 63%,50% 100%,36% 63%,0 50%,36% 36%);opacity:0;animation:win-spark calc(700ms * var(--fx-speed,1)) ease-out calc((var(--fx-charge,340ms) + var(--spark-delay,0ms)) * var(--fx-speed,1)) both}
 .celebrating-combo .win-glint{background:#fffbd5}.celebrating-combo .win-beam{box-shadow:0 0 24px #64d9ca}
 .combo-help,.drag-help{font-size:12px!important;color:var(--muted);padding:12px;background:#f5e8d5;border-radius:14px}
+.tile.spring-placed{z-index:4;transform-origin:50% 75%;animation:spring-place calc(480ms * var(--fx-speed,1)) ease-out both}
+.spring-place-halo{position:absolute;left:calc(var(--col) * (100% + var(--gap))/5);top:calc(var(--row) * (100% + var(--gap))/5);width:calc((100% - 4 * var(--gap))/5);height:calc((100% - 4 * var(--gap))/5);border:2px solid var(--coral);border-radius:14px;animation:spring-place-halo calc(410ms * var(--fx-speed,1)) ease-out both}
+.tile.winning-line{animation:none;transform-origin:50% 75%}
+.tile.winning-line.clear{animation:spring-line calc(520ms * var(--fx-speed,1)) ease-out calc(var(--spring-delay,0ms) * var(--fx-speed,1)) both}
+.board.celebrating-line{animation:none}
+.spring-mote{position:absolute;left:var(--origin-x);top:var(--origin-y);width:6px;height:6px;border-radius:50%;background:var(--coral);opacity:0;animation:spring-mote calc(480ms * var(--fx-speed,1)) ease-out calc((var(--fx-charge,180ms) + var(--spring-delay,0ms) + 230ms) * var(--fx-speed,1)) both}
+@keyframes spring-place{0%{transform:scale(1.16,.79)}30%{transform:translateY(-7px) scale(.94,1.08)}60%{transform:scale(1.06,.94)}80%{transform:translateY(-2px) scale(.99,1.02)}100%{transform:none}}
+@keyframes spring-place-halo{0%{opacity:.65;transform:scale(.8)}100%{opacity:0;transform:scale(1.3)}}
+@keyframes spring-line{0%{opacity:1;transform:scale(1)}20%{opacity:1;transform:scale(1.1,.85)}46%{opacity:1;transform:translate(var(--spring-x),calc(var(--spring-y) - 10px)) scale(.92,1.07)}70%{opacity:.9;transform:translate(var(--spring-x),var(--spring-y)) scale(1.05,.96)}100%{opacity:0;transform:translate(var(--spring-x),calc(var(--spring-y) + 5px)) scale(.15)}}
+@keyframes spring-mote{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}45%{opacity:.8;transform:translate(calc(-50% + var(--mote-x)),calc(-50% - 22px))}100%{opacity:0;transform:translate(calc(-50% + var(--mote-x) * 1.5),calc(-50% + 4px)) scale(.2)}}
 @keyframes line-aura{0%,100%{box-shadow:0 0 0 #fbd36c00}45%{box-shadow:0 0 22px #fbd36c88,0 0 42px #eeb13722}}
 @keyframes score-reward{0%,100%{transform:scale(1)}35%{transform:scale(1.07);color:#24858b;text-shadow:0 0 16px #edb13755}}
 @keyframes combo-reward{0%,100%{transform:scale(1)}35%{transform:scale(1.12);box-shadow:0 0 22px #edb13799,inset 0 0 10px #fff}}
@@ -38,3 +48,4 @@
 @keyframes game-aura{0%,100%{opacity:0}35%,65%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.win-ring,.win-spark,.win-beam{display:none}.celebration-card,.tile.winning,.tile.winning.clear,.board.celebrating-all,.celebrating-all .cell,.game.celebrating-all::before{animation:none}.tile.winning{background:#fff2b5}.celebration-card{opacity:1}}
 @media(prefers-reduced-motion:reduce){.win-glint{display:none}.score-reward,.combo-reward,.board.celebrating-line,.board.celebrating-combo{animation:none}.drag-chip{transform:translate(-50%,-50%)}}
+@media(prefers-reduced-motion:reduce){.spring-place-halo,.spring-mote{display:none}.tile.spring-placed,.tile.winning-line,.tile.winning-line.clear{animation:none;transform:none}.tile.winning-line.clear{opacity:0}}

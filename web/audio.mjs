@@ -1,18 +1,21 @@
 import {t} from './i18n.mjs';
+import {PLACEMENT_VARIANTS,createPlacementVariation} from './sound-variation.mjs';
 import {nativeAudioBridge} from './native-audio.mjs';
-export const AUDIO_FILES={button:'audio/ui-wood.wav',place:'audio/place.ogg',move:'audio/move.ogg',line:'audio/line.ogg'};
+export const AUDIO_FILES={button:'audio/ui-wood.wav',place:'audio/place-spring-2.wav',move:'audio/move.ogg',line:'audio/line-win.wav'};
 export function normalizeAudioSettings(value={}){
   const volume=(n,fallback)=>typeof n==='number'&&Number.isFinite(n)?Math.max(0,Math.min(1,n)):fallback;
-  return {effects:value?.effects!==false,music:value?.music===true,effectsVolume:volume(value?.effectsVolume,.7),musicVolume:volume(value?.musicVolume,.15)};
+  return {effects:value?.effects!==false,music:typeof value?.music==='boolean'?value.music:true,effectsVolume:volume(value?.effectsVolume,.7),musicVolume:volume(value?.musicVolume,.15)};
 }
 export function createAudio(){
   const KEY='imanto-audio-v1';let saved;try{saved=JSON.parse(localStorage.getItem(KEY));}catch{}
   let settings=normalizeAudioSettings(saved),unlocked=false;
   const native=nativeAudioBridge();
+  if(native)unlocked=true;
   const nativeSync=()=>native?.send('settings',{...settings,unlocked,visible:!document.hidden});
+  const nextPlacement=createPlacementVariation();
   const pools=new Map(),status=document.querySelector('#audio-status');
   const music=native?{volume:0,pause(){nativeSync();}}:document.createElement('audio');
-  if(!native){music.id='background-music';music.src='audio/carefree.mp3';music.preload='none';music.loop=true;music.hidden=true;document.body.append(music);}
+  if(!native){music.id='background-music';music.src='audio/meditation-impromptu-01.mp3';music.preload='none';music.loop=true;music.hidden=true;document.body.append(music);}
   const report=message=>{status.textContent=t(message);};
   function persist(){try{localStorage.setItem(KEY,JSON.stringify(settings));}catch{}nativeSync();}
   function sync(){
@@ -24,8 +27,10 @@ export function createAudio(){
   async function play(cue,{preview=false}={}){
     if(!settings.effects){if(preview)report('Efectos desactivados.');return false;}
     if(!unlocked||document.hidden||!AUDIO_FILES[cue])return false;
-    if(native){native.send('effect',{cue});if(preview)report('Reproduciendo…');return true;}
-    let pool=pools.get(cue);if(!pool){pool=Array.from({length:3},()=>{const audio=new Audio(AUDIO_FILES[cue]);audio.preload='auto';return audio;});pools.set(cue,pool);}
+    const variation=cue==='place'?nextPlacement():null;
+    const file=cue==='place'?`audio/${PLACEMENT_VARIANTS[variation]}.wav`:AUDIO_FILES[cue];
+    if(native){native.send('effect',{cue,...(variation===null?{}:{variation})});if(preview)report('Reproduciendo…');return true;}
+    let pool=pools.get(file);if(!pool){pool=Array.from({length:3},()=>{const audio=new Audio(file);audio.preload='auto';return audio;});pools.set(file,pool);}
     const sample=pool.find(a=>a.paused||a.ended);if(!sample)return false;
     sample.volume=settings.effectsVolume;sample.currentTime=0;
     try{await sample.play();if(preview){report('Reproduciendo…');sample.onended=()=>report('Listo para escuchar.');}return true;}catch{if(preview)report('No se pudo reproducir el audio.');return false;}
