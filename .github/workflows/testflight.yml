@@ -8,6 +8,7 @@ on:
         options:
           - macos-26
           - macos-15
+          - macos-26-intel
         default: macos-26
       qa_run_id:
         description: 'Optional successful native QA run; shipping source and test harness must match exactly'
