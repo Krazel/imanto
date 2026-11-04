@@ -1,5 +1,5 @@
 // Cosmetic state belongs to one game. Colour identities and puzzle rules never change.
-export const MATERIALS=['jelly','wood','ceramic'];
+export const MATERIALS=['classic','jelly','wood','ceramic'];
 export const PALETTES={
  original:{hex:['#f46b50','#278a91','#edb137','#927fb6'],es:['Coral','Turquesa','Miel','Violeta'],en:['Coral','Teal','Honey','Violet']},
  arcade:{hex:['#3556e5','#e9338b','#a2cf27','#f28a25'],es:['Azul eléctrico','Fucsia','Lima','Mandarina'],en:['Electric blue','Hot pink','Lime','Tangerine']},
@@ -11,10 +11,10 @@ const COLORS=['coral','teal','honey','violet'];
 export function readBlockAppearance(value){
  return {material:MATERIALS.includes(value?.material)?value.material:'jelly',palette:Object.hasOwn(PALETTES,value?.palette)?value.palette:'original'};
 }
-export function nextBlockAppearance(previous,random=Math.random){
+export function nextBlockAppearance(previous,random=Math.random,selected=MATERIALS){
  const old=readBlockAppearance(previous);
  const pick=items=>items[Math.min(items.length-1,Math.max(0,Math.floor(random()*items.length)))];
- return {material:pick(MATERIALS.filter(x=>x!==old.material)),palette:pick(Object.keys(PALETTES).filter(x=>x!==old.palette))};
+ return {material:pick(selected.length===1?selected:selected.filter(x=>x!==old.material)),palette:pick(Object.keys(PALETTES).filter(x=>x!==old.palette))};
 }
 export function applyBlockAppearance(state,root=document.documentElement){
  const value=readBlockAppearance(state.blockAppearance);state.blockAppearance=value;

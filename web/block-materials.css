@@ -19,3 +19,6 @@
 .tile.ghost{border:2px dashed var(--ink)!important;box-shadow:none!important}
 .tile.contact{outline:2px solid var(--ink);outline-offset:-2px}
 .choice.used .chip::before,.choice.used .chip::after{content:none}
+
+[data-block-material=classic] :is(.tile:not(.winning),.chip,.forecast-chip,.drag-chip):is(.coral,.teal,.honey,.violet){background:var(--paint);border-color:#00000008;box-shadow:inset 0 2px 0 #ffffff35,inset 0 -2px 0 #0000000c}
+[data-block-material=classic] :is(.tile:not(.winning),.chip,.forecast-chip,.drag-chip)::before,[data-block-material=classic] :is(.tile:not(.winning),.chip,.forecast-chip,.drag-chip)::after{content:none}

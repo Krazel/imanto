@@ -41,6 +41,26 @@ import WebKit
         let size = try await web.evaluateJavaScript("parseFloat(getComputedStyle(document.querySelector('#menu-score')).fontSize)") as! Double
         XCTAssertLessThanOrEqual(size, 42, "Pause numbers remain restrained, including long scores")
         _ = try await web.evaluateJavaScript("document.querySelector('#settings-open').click();true")
+        let materialSettings = try await web.evaluateJavaScript("JSON.stringify({layout:document.querySelector('#material-settings').dataset.layout,open:document.querySelector('.material-disclosure').open,values:[...document.querySelectorAll('#material-settings input')].map(i=>i.value),samples:document.querySelectorAll('.material-swatch').length})") as! String
+        let materialSettingsJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(materialSettings.utf8)) as? [String: Any])
+        XCTAssertEqual(materialSettingsJSON["layout"] as? String, "1", "The approved multicolor rows are the shipping layout")
+        XCTAssertEqual(materialSettingsJSON["open"] as? Bool, true)
+        XCTAssertEqual(materialSettingsJSON["values"] as? [String], ["classic", "jelly", "wood", "ceramic"])
+        XCTAssertEqual(materialSettingsJSON["samples"] as? Int, 16)
+        let savedMaterialPreference = try await web.evaluateJavaScript("localStorage.getItem('imanto-material-selection-v1')")
+        _ = try await web.evaluateJavaScript("document.querySelector('.material-all').click();document.querySelector('#material-settings input[value=wood]').click();document.querySelector('.material-disclosure summary').click();true")
+        let collapsedSelection = try await web.evaluateJavaScript("!document.querySelector('.material-disclosure').open && !document.querySelector('#material-settings input[value=wood]').checked && !JSON.parse(localStorage.getItem('imanto-material-selection-v1')).includes('wood')") as! Bool
+        XCTAssertTrue(collapsedSelection, "Collapsing must preserve the chosen subset")
+        _ = try await web.evaluateJavaScript("document.querySelector('.material-disclosure summary').click();true")
+        let retainedSelection = try await web.evaluateJavaScript("document.querySelector('.material-disclosure').open && !document.querySelector('#material-settings input[value=wood]').checked && document.documentElement.dataset.blockMaterial==='jelly'") as! Bool
+        XCTAssertTrue(retainedSelection, "Preferences apply to new games, never repaint the current game")
+        _ = try await web.evaluateJavaScript("document.querySelector('.material-all').click();true")
+        if let previous = savedMaterialPreference as? String {
+            let encoded = String(data: try JSONSerialization.data(withJSONObject: previous, options: .fragmentsAllowed), encoding: .utf8)!
+            _ = try await web.evaluateJavaScript("localStorage.setItem('imanto-material-selection-v1',\(encoded));true")
+        } else {
+            _ = try await web.evaluateJavaScript("localStorage.removeItem('imanto-material-selection-v1');true")
+        }
         try await verifyAndCapture(web, id: "settings", name: "settings")
         let before = try await web.evaluateJavaScript("document.querySelector('#sound-enabled').checked") as! Bool
         _ = try await web.evaluateJavaScript("document.querySelector('#sound-enabled').click();true")

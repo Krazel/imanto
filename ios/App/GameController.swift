@@ -75,6 +75,7 @@ final class GameController: UIViewController, WKNavigationDelegate {
         }
         NotificationCenter.default.addObserver(self, selector: #selector(suspend), name: UIApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(resume), name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(enteredBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(interrupted), name: AVAudioSession.interruptionNotification, object: nil)
     }
     override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); ads?.updateLayout() }
@@ -100,6 +101,7 @@ final class GameController: UIViewController, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { navigationError = error.localizedDescription }
     @objc private func suspend() { web?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('imanto-app-active',{detail:false}))", completionHandler: nil); haptics.active = false; audio.active = false; audio.pause() }
     @objc private func resume() { web?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('imanto-app-active',{detail:true}))", completionHandler: nil); haptics.active = !ads.fullscreenPresenting; audio.active = !ads.fullscreenPresenting; audio.reconcile(); ads.initializeOnLaunch(resetRetries: true); Task { await subscriptions.refresh() } }
+    @objc private func enteredBackground() { ads.applicationDidEnterBackground() }
     @objc private func interrupted(_ notification: Notification) {
         guard let number = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: number) else { return }

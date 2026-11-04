@@ -22,4 +22,17 @@ import XCTest
         preparation.run({ $0(true) }, completion: { answers.append($0) })
         XCTAssertEqual(answers, [false, true])
     }
+    func testLateDuplicateCallbackCannotFinishTheNextTransaction() {
+        let preparation = ConsentPreparation()
+        var first: ((Bool) -> Void)?, second: ((Bool) -> Void)?
+        var answers: [Bool] = []
+        preparation.run({ first = $0 }, completion: { answers.append($0) })
+        first?(false)
+        preparation.run({ second = $0 }, completion: { answers.append($0) })
+        first?(true)
+        XCTAssertTrue(preparation.running)
+        XCTAssertEqual(answers, [false])
+        second?(true)
+        XCTAssertEqual(answers, [false, true])
+    }
 }

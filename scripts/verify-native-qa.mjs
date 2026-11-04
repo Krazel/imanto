@@ -11,7 +11,7 @@ const get=async endpoint=>{
 const run=await get(`actions/runs/${id}`),workflow=await get('actions/workflows/native-qa.yml');
 assert.equal(run.workflow_id,workflow.id);assert.equal(run.status,'completed');assert.equal(run.conclusion,'success');assert.equal(run.head_branch,'main');assert.equal(run.event,'workflow_dispatch');
 assert(/^[a-f0-9]{40}$/.test(run.head_sha));
-const paths=['ios','web','tests','package.json','package-lock.json','scripts/prepare-native.mjs','scripts/native-qa.mjs','scripts/native-config.json'];
+const paths=['ios','web','tests','package.json','package-lock.json','scripts/prepare-native.mjs','scripts/native-qa.mjs','scripts/native-config.json','scripts/ad-destination.mjs','scripts/ad-inventory-qa.mjs','scripts/ad-project-qa.mjs','scripts/build-distribution.mjs','scripts/build-testflight.mjs','scripts/build-app-store.mjs'];
 const diff=spawnSync('git',['diff','--quiet',run.head_sha,process.env.GITHUB_SHA,'--',...paths]);
 assert.equal(diff.status,0,'Native app, assets, packaging or test harness changed: run fresh native QA first');
 fs.mkdirSync('artifacts/testflight',{recursive:true});

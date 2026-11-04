@@ -1,7 +1,7 @@
 import {t} from './i18n.mjs';
 import {PLACEMENT_VARIANTS,createPlacementVariation} from './sound-variation.mjs';
 import {nativeAudioBridge} from './native-audio.mjs';
-export const AUDIO_FILES={button:'audio/ui-wood.wav',place:'audio/place-spring-2.wav',move:'audio/move.ogg',line:'audio/line-win.wav'};
+export const AUDIO_FILES={button:'audio/ui-wood.wav',place:'audio/place-spring-2.wav',move:'audio/move-roce.wav',line:'audio/line-win.wav'};
 export function normalizeAudioSettings(value={}){
   const volume=(n,fallback)=>typeof n==='number'&&Number.isFinite(n)?Math.max(0,Math.min(1,n)):fallback;
   return {effects:value?.effects!==false,music:typeof value?.music==='boolean'?value.music:true,effectsVolume:volume(value?.effectsVolume,.7),musicVolume:volume(value?.musicVolume,.15)};

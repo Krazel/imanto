@@ -1,0 +1,12 @@
+# Commercial archive only. Debug remains demo even with this specification.
+include:
+  - project.ads.yml
+targets:
+  Imanto:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) IMANTO_PRODUCTION
+        IMANTO_ADS_MODE: production
+      configs:
+        Debug:
+          IMANTO_ADS_MODE: demo

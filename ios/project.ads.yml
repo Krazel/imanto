@@ -1,5 +1,5 @@
-# Optional native QA configuration. Ordinary project.yml remains SDK-free.
-# TestFlight enables test inventory; commercial serving remains gated off.
+# Development and TestFlight inventory. Ordinary project.yml remains SDK-free.
+# The separate project.store.yml selects real units for a commercial archive.
 include:
   - project.yml
 packages:
@@ -17,5 +17,6 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: App/Info.ads.plist
+        IMANTO_ADS_MODE: demo
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) IMANTO_TESTFLIGHT
         OTHER_LDFLAGS: $(inherited) -ObjC

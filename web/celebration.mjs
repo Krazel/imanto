@@ -10,20 +10,34 @@ export function createCelebration(board,game,boardSize=5){
   const layer=document.createElement('div');layer.className='celebration-layer';layer.setAttribute('aria-hidden','true');board.append(layer);
   layer.style.setProperty('--fx-board-size',boardSize);
   const cellPercent=100/boardSize,center=(boardSize-1)/2,innerDistance=boardSize%2?0:.5;
-  let placedTile=null,placementHalo=null;
+  const placements=new Map();
+  let releaseTimer=null;
   function finishPlacement(){
-    placedTile?.classList.remove('spring-placed');placementHalo?.remove();placedTile=null;placementHalo=null;
+    for(const cleanup of [...placements.values()])cleanup();
   }
-  function place(tile){
-    finishPlacement();placedTile=tile;tile.classList.add('spring-placed');
-    placementHalo=document.createElement('i');placementHalo.className='spring-place-halo';
+  function place(tile,duration=480){
+    if(releaseTimer!==null)finish({keepPlacement:true});
+    placements.get(tile)?.();if(duration===0)return 480;
+    tile.classList.add('spring-placed');
+    const placementHalo=document.createElement('i');placementHalo.className='spring-place-halo';
     for(const key of ['--row','--col'])placementHalo.style.setProperty(key,tile.style.getPropertyValue(key));
+    const cleanup=()=>{clearTimeout(timer);tile.removeEventListener('animationend',ended);tile.classList.remove('spring-placed');placementHalo.remove();placements.delete(tile);};
+    const ended=event=>{if(event.target===tile&&event.animationName==='spring-place')cleanup();};
+    const timer=setTimeout(cleanup,duration+50);tile.addEventListener('animationend',ended);placements.set(tile,cleanup);
     layer.append(placementHalo);return 480;
   }
-  function finish(){
-    finishPlacement();
-    layer.replaceChildren();board.classList.remove('celebrating','celebrating-line','celebrating-combo','celebrating-all');
+  function finish({keepPlacement=false,keepReleased=false}={}){
+    if(keepReleased&&releaseTimer!==null)return;
+    clearTimeout(releaseTimer);releaseTimer=null;
+    if(!keepPlacement)finishPlacement();
+    for(const child of [...layer.children])if(!keepPlacement||!child.classList.contains('spring-place-halo'))child.remove();
+    board.classList.remove('celebrating','celebrating-line','celebrating-combo','celebrating-all');
     game.classList.remove('celebrating-all');
+  }
+  function release(duration){
+    clearTimeout(releaseTimer);
+    if(duration<=0){finish({keepPlacement:true});return;}
+    releaseTimer=setTimeout(()=>{releaseTimer=null;finish({keepPlacement:true});},duration);
   }
   function start(frame,tiles){
     finish();const source=celebrationFor(frame),info={...source,title:frame.allClear?t('¡Tablero limpio!'):frame.multiplier>1?t('¡Combo ×{n}!',{n:frame.multiplier}):frame.lineCount>3?t('¡{n} líneas!',{n:frame.lineCount}):t(source.title),detail:frame.multiplier>1?t('{base} × {combo} · +{points}',{base:frame.baseGain,combo:frame.multiplier,points:frame.gain}):frame.lineCount>1?t('{n} líneas · +{points} puntos',{n:frame.lineCount,points:frame.gain}):t('+{points} puntos',{points:frame.gain})};
@@ -70,5 +84,5 @@ export function createCelebration(board,game,boardSize=5){
     const detail=document.createElement('span');detail.textContent=info.detail;card.append(title,detail);layer.append(card);
     return info;
   }
-  return {start,finish,place,finishPlacement};
+  return {start,finish,place,finishPlacement,release};
 }

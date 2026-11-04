@@ -46,6 +46,7 @@ export const EN={
   'Compra pendiente de aprobación.':'Purchase awaiting approval.','Compra cancelada.':'Purchase cancelled.',
   'No se pudo completar. Inténtalo de nuevo.':'Could not complete. Try again.',
   'Privacidad de los anuncios':'Ad privacy options',
+  'No se pudieron actualizar las opciones de privacidad. Inténtalo de nuevo.':'Could not update your privacy choices. Please try again.',
   'Revivir viendo un anuncio':'Watch an ad to revive',
   'Elimina una ficha del tablero. Una sola vez por partida.':'Remove one tile from the board. Once per game.',
   'Elige una ficha del tablero para eliminarla.':'Choose one tile on the board to remove.',

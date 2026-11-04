@@ -22,7 +22,7 @@ test('only approved materials and complete palettes change between games, withou
   assert(MATERIALS.includes(next.material));assert(Object.hasOwn(PALETTES,next.palette));
   materials.add(next.material);palettes.add(next.palette);previous=next;
  }
- assert.equal(materials.size,3);assert.equal(palettes.size,5);
+ assert.equal(materials.size,4);assert.equal(palettes.size,5);
  assert.equal(blockColorName('teal',{palette:'arcade'},'es'),'Fucsia');
  assert.equal(blockColorName('violet',{palette:'ink'},'en'),'Cobalt blue');
  assert.deepEqual(readBlockAppearance({material:'unapproved',palette:'bad'}),{material:'jelly',palette:'original'});

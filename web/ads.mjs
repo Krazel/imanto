@@ -17,21 +17,26 @@ export function createAdCadence(storage,{now=Date.now,config=ADS_CONFIG}={}){
   };
 }
 export function createAds({config=ADS_CONFIG,provider=null,suppressAutomatic=()=>false}={}){
-  let presenting=false;
+  let presenting=false,changingPrivacy=false;
   const enabled=kind=>config[kind]===true&&(!(kind==='banner'||kind==='interstitial')||!suppressAutomatic());
   return {
     enabled,
     supported:kind=>enabled(kind)&&!!provider,
-    async privacy(){if(!['banner','interstitial','rewarded'].some(enabled)||!provider?.privacy)return false;try{return await provider.privacy();}catch{return false;}},
-    async ready(kind){if(!enabled(kind)||presenting||!provider)return false;try{return (await provider.ready(kind))===true;}catch{return false;}},
-    async available(kind){if(!enabled(kind)||presenting||!provider?.available)return false;try{return (await provider.available(kind))===true;}catch{return false;}},
+    async privacy(){
+      if(changingPrivacy||presenting||!['banner','interstitial','rewarded'].some(kind=>config[kind]===true)||!provider?.privacy)return false;
+      changingPrivacy=true;
+      try{await provider.banner?.(false);return (await provider.privacy())===true;}catch{return false;}finally{changingPrivacy=false;}
+    },
+    async privacyState(){try{return await provider?.privacyState?.()??null;}catch{return null;}},
+    async ready(kind){if(!enabled(kind)||presenting||changingPrivacy||!provider)return false;try{return (await provider.ready(kind))===true&&!changingPrivacy;}catch{return false;}},
+    async available(kind){if(!enabled(kind)||presenting||changingPrivacy||!provider?.available)return false;try{return (await provider.available(kind))===true&&!changingPrivacy;}catch{return false;}},
     async show(kind,onEarned=()=>{},onShown=()=>{}){
-      if(!enabled(kind)||presenting||!provider)return {shown:false,earned:false};
+      if(!enabled(kind)||presenting||changingPrivacy||!provider)return {shown:false,earned:false};
       presenting=true;
       let didShow=false;const shown=()=>{if(!didShow){didShow=true;onShown();}};
       try{const r=await provider.show(kind,onEarned,shown);if(r?.shown===true)shown();return {shown:r?.shown===true,earned:kind==='rewarded'&&r?.shown===true&&r?.earned===true,...(r?.uncertain?{uncertain:true}:{})};}
       catch{return {shown:false,earned:false};}finally{presenting=false;}
     },
-    async banner(visible){if(config.banner!==true||!provider)return false;try{return await provider.banner(visible===true&&enabled('banner'));}catch{return false;}}
+    async banner(visible){if(config.banner!==true||!provider||visible&&changingPrivacy)return false;try{return await provider.banner(visible===true&&enabled('banner'));}catch{return false;}}
   };
 }

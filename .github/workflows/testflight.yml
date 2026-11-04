@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   testflight:
-    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
     runs-on: macos-26
     environment: app-store-production
     timeout-minutes: 40
@@ -30,6 +30,7 @@ jobs:
       - run: xcodebuild -version && xcrun --sdk iphoneos --show-sdk-version
       - run: npm ci && npm test && npm run build:ios
       - run: brew install xcodegen && cd ios && xcodegen generate --spec project.ads.yml
+      - run: node scripts/ad-inventory-qa.mjs && node scripts/ad-project-qa.mjs
       - name: Native offline, audio and gameplay tests on iPhone and iPad
         if: inputs.qa_run_id == ''
         run: node scripts/native-qa.mjs
@@ -52,7 +53,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Imanto-0.21-build1-${{ github.sha }}
+          name: Imanto-0.22-build1-${{ github.sha }}
           path: |
             artifacts/testflight/
             artifacts/qa/

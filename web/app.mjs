@@ -1,3 +1,5 @@
+import {installMaterialSettings,readMaterialSelection} from './material-settings.mjs';
+import {installTouchPolicy} from './touch-policy.mjs';
 import {createBoardMode} from './board-mode.mjs';
 const mode=createBoardMode(new URLSearchParams(location.search).get('size')==='6'?6:5);
 const SIZE=mode.size;
@@ -14,6 +16,7 @@ import {VARIANTS,variantSaveKey,loadComparison} from './variants.mjs';
 import {MAIN_SAVE_KEY,loadMain} from './main-save.mjs';
 import {DEMOS,effectScene,createEffectsRoom} from './effect-demos.mjs';
 import {createCelebration} from './celebration.mjs';
+import {MOTION_PACING,moveDuration,settlePause,deferLineCheck,markMotion} from './motion-pacing.mjs';
 import {t,initializeLanguage,language} from './i18n.mjs';
 import {writeScore,fitScore,scoreText} from './score-display.mjs';
 import {createAudio} from './audio.mjs';
@@ -117,8 +120,12 @@ addEventListener('pageshow',()=>{appActive=true;syncGameTime();});
 document.addEventListener('visibilitychange',syncGameTime);
 new MutationObserver(syncGameTime).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
 setInterval(syncGameTime,5000);
-$('#ad-privacy').hidden=!IS_MAIN||!['banner','interstitial','rewarded'].some(ads.supported);
-$('#ad-privacy').addEventListener('click',async()=>{await ads.privacy();await syncAutomaticAds();});
+if(IS_MAIN){
+  void import('./ad-privacy.mjs').then(({bindAdPrivacy})=>{
+    const privacy=bindAdPrivacy({ads,button:$('#ad-privacy'),status:$('#ad-privacy-status'),translate:t,onResolved:syncAutomaticAds});
+    void privacy.refresh();
+  });
+}
 const personalBest=createPersonalBest(storage,mode.bestKey);
 if(IS_EFFECTS)state=effectParam==='1'?restoreGame(readSave(SAVE))||effectScene(demoKind).state:effectScene(demoKind).state;
 else if(VARIANT)state=loadComparison(variantId,storage);
@@ -201,8 +208,7 @@ async function animate(result,oldScore,playedId=null,initialBoard=null,lineCheck
   clearTimeout(bonusTimer);clearTimeout(statusTimer);$('#bonus').classList.remove('show');busy=true;clearPreview();persist();
   if(initialBoard){piecesEl.replaceChildren();renderBoard(initialBoard);}
   boardEl.setAttribute('aria-busy','true');$('#pause').disabled=true;lab?.setBusy(true);effectRoom?.setBusy(true);setQuickBusy(true);renderTray();status.textContent=t('Los imanes se recolocan…');
-  const moveFrames=result.frames.filter(f=>f.kind==='move').length;
-  const speed=IS_LAB?physics.speed:Math.min(physics.speed,Math.max(12,1100/Math.max(1,moveFrames)));
+  const speed=moveDuration({laboratory:IS_LAB,labSpeed:physics.speed});
   document.documentElement.style.setProperty('--move-ms',`${speed*(IS_EFFECTS?demoSpeed:1)}ms`);let shown=oldScore,activeCelebration=null;
   for(const frame of result.frames){
     if(frame.kind==='clear'){
@@ -218,14 +224,22 @@ async function animate(result,oldScore,playedId=null,initialBoard=null,lineCheck
       renderBoard(frame.board);
       if(frame.kind==='place'&&playedId!==null){
         const placed=[...piecesEl.children].find(el=>Number(el.dataset.id)===playedId);
-        if(placed){await delay(celebration.place(placed));celebration.finishPlacement();}
+        if(placed){markMotion('contact');celebration.place(placed,reduce.matches?0:MOTION_PACING.placement*(IS_EFFECTS?demoSpeed:1));}
+        if(typeof lineCheck==='function')lineCheck=deferLineCheck(lineCheck);
+        await delay(MOTION_PACING.contact);
       }
-      if(frame.kind==='move'){audio.play('move');await delay(speed+(IS_LAB?10:0));}
-      if(frame.kind==='settle'&&activeCelebration){await delay(activeCelebration.linger);celebration.finish();activeCelebration=null;}
+      if(frame.kind==='move'){markMotion('move');audio.play('move');await delay(speed+(IS_LAB?10:0));}
+      if(frame.kind==='settle'&&activeCelebration){
+        const pause=settlePause(activeCelebration,{demonstration:IS_EFFECTS});
+        if(pause){await delay(pause);celebration.finish();}
+        else celebration.release(reduce.matches?0:activeCelebration.linger*(IS_EFFECTS?demoSpeed:1));
+        activeCelebration=null;
+      }
     }
   }
   if(lineCheck){status.textContent=t('Comprobando líneas posibles…');state=applyLineCheck(state,await lineCheck);persist();}
-  busy=false;renderBoard(state.board);renderTray();showScore(state.score);$('#pause').disabled=false;lab?.setBusy(false);effectRoom?.setBusy(false);setQuickBusy(false);celebration.finish();boardEl.setAttribute('aria-busy','false');
+  busy=false;renderBoard(state.board);renderTray();showScore(state.score);$('#pause').disabled=false;lab?.setBusy(false);effectRoom?.setBusy(false);setQuickBusy(false);celebration.finish({keepPlacement:true,keepReleased:true});boardEl.setAttribute('aria-busy','false');
+  markMotion('ready');
   const resultMessage=result.allClears?t('¡Tablero limpio! +{points} puntos',{points:result.total}):result.maxSimultaneous>1?t('¡Combo de {n} líneas! +{points} puntos',{n:result.maxSimultaneous,points:result.total}):result.total?t('+{points} puntos · {n} línea',{points:result.total,n:result.lineCount}):result.physicsMoves?t(result.physicsMoves===1?'Expulsión · {n} movimiento':'Expulsión · {n} movimientos',{n:result.physicsMoves}):t(mode.isSix?'Completa seis del mismo color':'Completa cinco del mismo color');
   status.textContent=IS_MAIN&&!result.total?idleMessage():resultMessage;
   if(IS_MAIN&&result.total)statusTimer=setTimeout(()=>{if(!busy&&!state.over)status.textContent=idleMessage();},2400);
@@ -236,9 +250,10 @@ async function place(at){
   if(busy||menu.open||help.open||restartConfirm.open)return;
   if(removingForRevive){await finishRevive(at);return;}
   if(editing){const brush=lab.getBrush();draft.board[at]=brush.color==='empty'?null:{id:draft.nextId++,color:brush.color};draft.over=false;draft.endReason=null;triggerId=draft.board[at]?.id||null;experiment=structuredClone(draft);renderBoard(draft.board);lab.showStats(draft.board,0,true);return;}
-  if(state.over||state.board[at])return;
+  if(state.over||state.board[at]||!state.tray[selected])return;
+  busy=true;markMotion('input');
   experiment=null;const oldScore=state.score,playedId=state.tray[selected].id,result=playTurn(state,at,selected,IS_EFFECTS&&demoKind==='escape'?()=>.5:Math.random,physics);
-  state=result.state;audio.play('place');if(result.frames.find(f=>f.kind!=='place')?.kind!=='clear')haptics.play('place');if(IS_MAIN)finishGuidance();const lineCheck=IS_LAB?null:checkLines(state,physics);
+  state=result.state;audio.play('place');if(result.frames.find(f=>f.kind!=='place')?.kind!=='clear')haptics.play('place');if(IS_MAIN)finishGuidance();const checkedState=state,lineCheck=IS_LAB?null:async()=>{markMotion('search-start');const result=await checkLines(checkedState,physics);markMotion('search-done');return result;};
   if(!state.tray[selected]||result.newRound)selected=state.tray.findIndex(Boolean);await animate(result,oldScore,playedId,null,lineCheck);
 }
 const trayDrag=installTrayDrag({tray:trayEl,board:boardEl,
@@ -443,7 +458,7 @@ async function restartGame(){
       busy=false;$('#new-game').disabled=false;
     }
   }
-  const nextAppearance=nextBlockAppearance(state.blockAppearance);
+  const nextAppearance=nextBlockAppearance(state.blockAppearance,Math.random,readMaterialSelection(localStorage));
   celebration.finish();state=VARIANT?loadComparison(variantId,storage,Math.random,{restart:true}):createGame(Math.random,physics);
   state.blockAppearance=nextAppearance;applyBlockAppearance(state);
   identifyGame();removingForRevive=false;
@@ -496,4 +511,5 @@ if(IS_EFFECTS){
   if(!IS_CAPTURE&&Object.hasOwn(DEMOS,effectParam))requestAnimationFrame(()=>requestAnimationFrame(()=>playDemo(demoKind)));
 }
 initializeLanguage();
+installMaterialSettings();installTouchPolicy();
 if(IS_MAIN)syncMembership();
