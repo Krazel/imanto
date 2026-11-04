@@ -2,6 +2,13 @@ name: Imanto TestFlight
 on:
   workflow_dispatch:
     inputs:
+      runner:
+        description: 'Standard free public runner; macos-15 is a capacity fallback with Xcode 26.3'
+        type: choice
+        options:
+          - macos-26
+          - macos-15
+        default: macos-26
       qa_run_id:
         description: 'Optional successful native QA run; shipping source and test harness must match exactly'
         type: string
@@ -16,7 +23,7 @@ concurrency:
 jobs:
   testflight:
     if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
-    runs-on: macos-26
+    runs-on: ${{ inputs.runner || 'macos-26' }}
     environment: app-store-production
     timeout-minutes: 40
     steps:
@@ -27,6 +34,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Select Xcode 26 on the fallback runner
+        if: inputs.runner == 'macos-15'
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
       - run: xcodebuild -version && xcrun --sdk iphoneos --show-sdk-version
       - run: npm ci && npm test && npm run build:ios
       - run: brew install xcodegen && cd ios && xcodegen generate --spec project.ads.yml
