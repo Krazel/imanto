@@ -1,0 +1,25 @@
+name: Imanto runner diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: uname -a
+  mac:
+    if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 2
+    steps:
+      - run: xcodebuild -version
+  mac-environment:
+    if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    environment: app-store-production
+    timeout-minutes: 2
+    steps:
+      - run: xcodebuild -version
