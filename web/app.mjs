@@ -414,7 +414,7 @@ $('#menu-remove-ads').addEventListener('click',openMembership);
 $('#membership-upgrade').addEventListener('click',openMembership);
 $('#membership-close').addEventListener('click',()=>membership.close());
 const settings=$('#settings');
-$('#settings-open').addEventListener('click',()=>settings.showModal());
+$('#settings-open').addEventListener('click',()=>{settings.querySelector('.material-disclosure')?.removeAttribute('open');settings.showModal();});
 $('#settings-close').addEventListener('click',()=>settings.close());
 $('#membership-restore').addEventListener('click',()=>membershipAction(()=>subscriptions.restore()));
 $('#membership-manage').addEventListener('click',()=>membershipAction(()=>subscriptions.manage()));

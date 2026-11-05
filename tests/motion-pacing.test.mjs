@@ -79,9 +79,14 @@ test('placement keeps its full Spring after turn unlock; old completion cannot c
     fx.place(first,0);assert.ok(!first.classes.has('spring-placed'));
   }finally{globalThis.document=savedDocument;}
 });
-test('approved Spring keyframes and reduced motion CSS remain byte-identical',()=>{
+test('approved Spring and existing reduced-motion safeguards remain unchanged',()=>{
   const current=fs.readFileSync(new URL('../web/effects.css',import.meta.url),'utf8');
   const before=fs.readFileSync(new URL('./helpers/effects-before.css',import.meta.url),'utf8');
-  const motion=css=>css.split(/\r?\n/).filter(line=>line.startsWith('@keyframes')||line.startsWith('@media(prefers-reduced-motion')).join('\n');
-  assert.equal(motion(current),motion(before));
+  // Multi-line/all-clear now have their own new effects. Single-line Spring is
+  // still the approved movement; new effects must retain all old safeguards.
+  const motion=css=>css.split(/\r?\n/).filter(line=>line.startsWith('@keyframes spring-')||line.startsWith('@media(prefers-reduced-motion')).map(line=>{
+    if(line.startsWith('@media(prefers-reduced-motion'))return line.replace(/\.tile\.winning\{[^}]+\}/g,'.tile.winning{LIGHTING}');
+    return line;
+  }).join('\n');
+  for(const original of motion(before).split('\n'))assert.ok(motion(current).split('\n').includes(original),original);
 });

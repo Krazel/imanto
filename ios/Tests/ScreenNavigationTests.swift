@@ -44,16 +44,23 @@ import WebKit
         let materialSettings = try await web.evaluateJavaScript("JSON.stringify({layout:document.querySelector('#material-settings').dataset.layout,open:document.querySelector('.material-disclosure').open,values:[...document.querySelectorAll('#material-settings input')].map(i=>i.value),samples:document.querySelectorAll('.material-swatch').length})") as! String
         let materialSettingsJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(materialSettings.utf8)) as? [String: Any])
         XCTAssertEqual(materialSettingsJSON["layout"] as? String, "1", "The approved multicolor rows are the shipping layout")
-        XCTAssertEqual(materialSettingsJSON["open"] as? Bool, true)
-        XCTAssertEqual(materialSettingsJSON["values"] as? [String], ["classic", "jelly", "wood", "ceramic"])
-        XCTAssertEqual(materialSettingsJSON["samples"] as? Int, 16)
+        XCTAssertEqual(materialSettingsJSON["open"] as? Bool, false)
+        XCTAssertEqual(materialSettingsJSON["values"] as? [String], ["classic", "jelly", "wood", "ceramic", "paper-origami", "neon", "special-glass", "special-liquid", "special-sand", "special-circuit"])
+        XCTAssertEqual(materialSettingsJSON["samples"] as? Int, 40)
         let savedMaterialPreference = try await web.evaluateJavaScript("localStorage.getItem('imanto-material-selection-v1')")
+        _ = try await web.evaluateJavaScript("document.querySelector('.material-disclosure summary').click();true")
         _ = try await web.evaluateJavaScript("document.querySelector('.material-all').click();document.querySelector('#material-settings input[value=wood]').click();document.querySelector('.material-disclosure summary').click();true")
         let collapsedSelection = try await web.evaluateJavaScript("!document.querySelector('.material-disclosure').open && !document.querySelector('#material-settings input[value=wood]').checked && !JSON.parse(localStorage.getItem('imanto-material-selection-v1')).includes('wood')") as! Bool
         XCTAssertTrue(collapsedSelection, "Collapsing must preserve the chosen subset")
         _ = try await web.evaluateJavaScript("document.querySelector('.material-disclosure summary').click();true")
         let retainedSelection = try await web.evaluateJavaScript("document.querySelector('.material-disclosure').open && !document.querySelector('#material-settings input[value=wood]').checked && document.documentElement.dataset.blockMaterial==='jelly'") as! Bool
         XCTAssertTrue(retainedSelection, "Preferences apply to new games, never repaint the current game")
+        _ = try await web.evaluateJavaScript("document.querySelector('.material-clear').click();document.querySelector('#material-settings input[value=classic]').click();true")
+        let classicOnly = try await web.evaluateJavaScript("JSON.stringify([...document.querySelectorAll('#material-settings input:checked')].map(i=>i.value))") as! String
+        XCTAssertEqual(classicOnly, "[\"classic\"]", "Deselect all keeps classic and the last selection cannot be removed")
+        _ = try await web.evaluateJavaScript("document.querySelector('#material-settings input[value=wood]').click();document.querySelector('#material-settings input[value=classic]').click();true")
+        let alternativeOnly = try await web.evaluateJavaScript("JSON.stringify([...document.querySelectorAll('#material-settings input:checked')].map(i=>i.value))") as! String
+        XCTAssertEqual(alternativeOnly, "[\"wood\"]", "Classic can be removed once another material is selected")
         _ = try await web.evaluateJavaScript("document.querySelector('.material-all').click();true")
         if let previous = savedMaterialPreference as? String {
             let encoded = String(data: try JSONSerialization.data(withJSONObject: previous, options: .fragmentsAllowed), encoding: .utf8)!
@@ -114,6 +121,21 @@ import WebKit
         XCTAssertEqual(sixExample, 6)
         _ = try await web.evaluateJavaScript("document.querySelector('#close-help').click();document.querySelector('#try-six').click();true")
         try await waitFor(web, "!location.search.includes('size=6') && document.querySelectorAll('#cells .cell').length===25 && document.querySelector('#pause')?.disabled===false")
+        let paletteFixture = "const paletteSave=JSON.parse(localStorage.getItem('krazel-imanes-main-v6'));paletteSave.blockAppearance={material:'special-liquid',palette:'ink'};localStorage.setItem('krazel-imanes-main-v6',JSON.stringify(paletteSave));"
+        web.configuration.userContentController.addUserScript(WKUserScript(source: paletteFixture, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        web.reload()
+        try await waitFor(web, "document.documentElement.dataset.blockMaterial==='special-liquid' && document.documentElement.dataset.blockPalette==='ink' && document.querySelector('#board')?.getAttribute('aria-busy')==='false'")
+        let texture = try await web.callAsyncJavaScript(#"""
+        const tile = document.querySelector('#pieces .tile');
+        const art = getComputedStyle(tile, '::before');
+        const start = art.backgroundImage.indexOf('blob:');
+        if (start < 0) return false;
+        const image = new Image();
+        image.src = art.backgroundImage.slice(start).replace(/["')]+$/, '');
+        await image.decode();
+        return image.naturalWidth === 1254 && image.naturalHeight === 1254 && art.filter === 'none';
+        """#, arguments: [:], in: nil, contentWorld: .page) as? Bool
+        XCTAssertEqual(texture, true, "The packaged Ink artwork must decode locally without a chromatic filter")
     }
     private func waitFor(_ web: WKWebView, _ condition: String) async throws {
         for _ in 0..<300 {

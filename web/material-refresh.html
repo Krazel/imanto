@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fff7eb"><title>Imanto · Nuevos bloques</title><link rel="icon" href="data:,"><link rel="stylesheet" href="block-materials.css"><link rel="stylesheet" href="block-specials.css"><link rel="stylesheet" href="block-experiments.css"><link rel="stylesheet" href="material-refresh.css"></head>
+<body><main>
+  <header><a href="settings-review.html?lang=es" id="settings-link">← Ajustes corregidos</a><nav aria-label="Language"><a href="?lang=es" lang="es">ES</a><a href="?lang=en" lang="en">EN</a></nav></header>
+  <p class="eyebrow">IMANTO · <span data-copy="lab">PRUEBAS DE MATERIALES</span></p>
+  <h1 data-copy="title">Una tanda bien distinta.</h1><p class="intro" data-copy="intro">Tres versiones de papel, tejido, aluminio y píxel.</p><p><a id="all-colors-link" href="color-gallery.html?lang=es">Ver todos los estilos y colores →</a></p>
+  <div class="review-layout"><section class="atlas" aria-label="Propuestas"><h2 id="special-heading">De la imagen al tablero</h2><div id="special-materials"></div><h2 id="chosen-heading">Tus elegidos anteriores</h2><div id="chosen-materials"></div><details class="previous-proposals"><summary id="previous-label">Ver las pruebas anteriores</summary><div id="new-materials"></div><div id="extra-materials"></div></details><h2 data-copy="reference">Comparar con los actuales</h2><div id="approved-materials"></div></section>
+  <section class="preview-panel" aria-labelledby="preview-name"><div class="preview-heading"><div><p class="eyebrow" data-copy="preview">PRUEBA EN EL TABLERO</p><h2 id="preview-name"></h2></div><span class="tag" id="preview-tag"></span></div><p id="preview-description"></p>
+    <label class="material-picker"><span data-copy="picker">Cambiar material</span><select id="material-picker"></select></label>
+    <label class="material-picker"><span id="palette-label">Paleta de colores</span><select id="palette-picker"></select></label>
+    <iframe id="live-preview" title="Tablero de prueba de Imanto" src="about:blank"></iframe>
+    <div class="scene-buttons"><button data-scene="single" data-copy="single">Completar una línea</button><button data-scene="double" data-copy="double">Combo de dos</button><button data-scene="all" data-copy="all">Limpiar tablero</button></div>
+    <div class="playback"><button id="replay" class="primary" data-copy="repeat">Repetir animación</button><button id="prepare" data-copy="prepare">Preparar tablero</button></div>
+    <p id="review-status" role="status" aria-live="polite"></p><p class="fine" data-copy="notice">Solo pruebas: no cambia tu partida ni los estilos que tienes elegidos.</p>
+  </section></div>
+</main><script type="module" src="material-refresh.mjs"></script></body></html>

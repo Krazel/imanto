@@ -29,6 +29,37 @@
 .tile.winning-line.clear{animation:spring-line calc(520ms * var(--fx-speed,1)) ease-out calc(var(--spring-delay,0ms) * var(--fx-speed,1)) both}
 .board.celebrating-line{animation:none}
 .spring-mote{position:absolute;left:var(--origin-x);top:var(--origin-y);width:6px;height:6px;border-radius:50%;background:var(--coral);opacity:0;animation:spring-mote calc(480ms * var(--fx-speed,1)) ease-out calc((var(--fx-charge,180ms) + var(--spring-delay,0ms) + 230ms) * var(--fx-speed,1)) both}
+/* One anticipatory charge, one impact, then a readable reward. No extra turn delay. */
+.celebration-burst{position:absolute;inset:0;border-radius:12px;overflow:hidden;pointer-events:none;--burst-duration:580ms}
+.celebrating-all .celebration-burst{--burst-duration:780ms}
+.celebration-burst .win-ring{border-width:3px;border-color:#f2cf70;box-shadow:0 0 12px #fff9cf,0 0 28px #edb13755;animation-duration:calc(var(--burst-duration) * var(--fx-speed,1));animation-delay:calc((var(--fx-charge,340ms) + var(--burst-delay,0ms)) * var(--fx-speed,1))}
+.celebration-burst .win-ring:nth-of-type(even){border-color:#53bcb6;border-width:2px}
+.celebration-burst .win-spark{width:7px;height:7px;animation-duration:calc(var(--burst-duration) * var(--fx-speed,1))}
+.celebration-burst .win-glint{animation-duration:calc(var(--burst-duration) * var(--fx-speed,1))}
+.celebration-burst .win-confetti{width:5px;height:11px;border-radius:1px;animation-name:win-confetti;box-shadow:none}
+.celebration-burst .win-beam{animation-name:win-beam-impact;animation-duration:calc(480ms * var(--fx-speed,1));border-block:1px solid #fff7c288;background:linear-gradient(90deg,transparent,#fffbea99 25%,#fffbea 50%,#fffbea99 75%,transparent)}
+.celebration-burst .beam-column{border-block:0;border-inline:1px solid #fff7c288;background:linear-gradient(transparent,#fffbea99 25%,#fffbea 50%,#fffbea99 75%,transparent)}
+.win-ray{position:absolute;left:50%;top:50%;width:var(--ray-length);height:5px;transform-origin:0 50%;border-radius:50%;background:linear-gradient(90deg,transparent 12%,#fff8dc 45%,#e7b552 85%,transparent);opacity:0;animation:win-ray calc(var(--burst-duration) * var(--fx-speed,1)) cubic-bezier(.16,.7,.2,1) calc((var(--fx-charge,340ms) + var(--burst-delay,0ms)) * var(--fx-speed,1)) both}
+.win-ray:nth-of-type(odd){height:3px;background:linear-gradient(90deg,transparent 20%,#8edbd2 60%,#278a91,transparent)}
+.win-bloom{position:absolute;inset:5%;border-radius:50%;background:radial-gradient(ellipse,#fff8dfaa, #ffe5aa44 35%,transparent 70%);opacity:0;animation:win-bloom calc(var(--burst-duration) * var(--fx-speed,1)) ease-out calc(var(--fx-charge,340ms) * var(--fx-speed,1)) both}
+.win-board-wave{position:absolute;inset:3%;border:3px solid #f1c86a;border-radius:17px;box-shadow:inset 0 0 20px #ffe08e88,0 0 16px #ffe08e;opacity:0;animation:win-board-wave calc(840ms * var(--fx-speed,1)) ease-out calc(var(--fx-charge,440ms) * var(--fx-speed,1)) both}
+.board.celebrating-combo{animation:combo-impact calc(1000ms * var(--fx-speed,1)) ease-out both}
+.celebration-seal{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:8px;background:#fff0bd;color:#226f75;font-size:15px;font-weight:1000;line-height:1;box-shadow:inset 0 1px 0 #fff8}
+.celebrating-combo .celebration-card{top:calc(100% + 1px);gap:6px;padding:4px 8px;border:1px solid #4ca59f;border-radius:12px;background:linear-gradient(135deg,#278a91,#206f75);box-shadow:0 3px 0 #175b62,0 5px 14px #278a9130;animation-name:combo-card}
+.celebrating-combo .celebration-card strong{font-size:clamp(13px,3.6vw,18px)}
+.celebrating-combo .celebration-card span{font-size:clamp(9px,2.4vw,12px)}
+.celebrating-all .celebration-card{width:82%;min-height:136px;gap:7px;padding:16px 10px;background:linear-gradient(145deg,#fffdf4 15%,#fff3ce 75%,#ffe6a5);box-shadow:0 6px 0 #d6a857,0 15px 36px #69410f2b,0 0 34px #ffedb0aa;animation:all-clear-card calc(480ms * var(--fx-speed,1)) cubic-bezier(.2,.8,.2,1) both}
+.celebrating-all .celebration-seal{width:36px;height:36px;border-radius:50%;border:1px solid #c7932c;background:linear-gradient(#ffeab1,#f0bd51);color:#84561a;font-size:29px;box-shadow:0 2px 0 #d9a745,inset 0 1px 0 #fff}
+.celebrating-all .celebration-card strong{font-size:clamp(22px,5.7vw,30px);text-wrap:balance}
+.celebrating-all .celebration-card span{color:#72501d;font-size:14px;font-weight:900}
+@keyframes win-ray{0%{opacity:0;transform:rotate(var(--ray-angle)) scaleX(.15)}22%{opacity:.85}100%{opacity:0;transform:rotate(var(--ray-angle)) scaleX(1.15)}}
+@keyframes win-bloom{0%{opacity:0;transform:scale(.35)}25%{opacity:1}100%{opacity:0;transform:scale(1.25)}}
+@keyframes win-board-wave{0%{opacity:0;transform:scale(.55)}20%{opacity:.9}100%{opacity:0;transform:scale(1.04)}}
+@keyframes win-confetti{0%{opacity:0;transform:translate(-50%,-50%) rotate(0) scale(.4)}18%{opacity:1}65%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy) + 20px)) rotate(240deg) scale(.55)}}
+@keyframes win-beam-impact{0%{opacity:0;filter:blur(3px);scale:.85}20%{opacity:.9;filter:blur(0);scale:1}100%{opacity:0;filter:blur(3px);scale:1.05}}
+@keyframes combo-impact{0%,100%{box-shadow:0 1px 0 #fff8}34%{box-shadow:0 0 0 2px #6bb9b466,0 0 25px #64c7ba55}55%{box-shadow:0 0 0 5px #edc66b44,0 0 38px #e9b55255}}
+@keyframes combo-card{0%{opacity:0;transform:translate(-50%,7px) scale(.82)}65%{opacity:1;transform:translate(-50%,-2px) scale(1.04)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes all-clear-card{0%{opacity:0;transform:translate(-50%,-50%) scale(.64)}65%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes spring-place{0%{transform:scale(1.16,.79)}30%{transform:translateY(-7px) scale(.94,1.08)}60%{transform:scale(1.06,.94)}80%{transform:translateY(-2px) scale(.99,1.02)}100%{transform:none}}
 @keyframes spring-place-halo{0%{opacity:.65;transform:scale(.8)}100%{opacity:0;transform:scale(1.3)}}
 @keyframes spring-line{0%{opacity:1;transform:scale(1)}20%{opacity:1;transform:scale(1.1,.85)}46%{opacity:1;transform:translate(var(--spring-x),calc(var(--spring-y) - 10px)) scale(.92,1.07)}70%{opacity:.9;transform:translate(var(--spring-x),var(--spring-y)) scale(1.05,.96)}100%{opacity:0;transform:translate(var(--spring-x),calc(var(--spring-y) + 5px)) scale(.15)}}
@@ -36,8 +67,9 @@
 @keyframes line-aura{0%,100%{box-shadow:0 0 0 #fbd36c00}45%{box-shadow:0 0 22px #fbd36c88,0 0 42px #eeb13722}}
 @keyframes score-reward{0%,100%{transform:scale(1)}35%{transform:scale(1.07);color:#24858b;text-shadow:0 0 16px #edb13755}}
 @keyframes combo-reward{0%,100%{transform:scale(1)}35%{transform:scale(1.12);box-shadow:0 0 22px #edb13799,inset 0 0 10px #fff}}
-@keyframes winning-charge{0%{filter:brightness(1);transform:scale(1)}50%{background:#ffd16c;filter:brightness(1.06)}100%{background:#fff2b5;box-shadow:0 0 var(--win-glow) #ffe18a,inset 0 0 0 2px #fff9;transform:scale(1.03)}}
-@keyframes winning-burst{0%{background:#fff2b5;transform:scale(1.03);opacity:1}40%{background:#fffce0;transform:scale(1.05)}100%{background:#ffe4a5;transform:scale(.2);opacity:0}}
+/* Light the existing material, including its texture and relief, without repainting it. */
+@keyframes winning-charge{0%{filter:brightness(1) drop-shadow(0 0 0 #ffe18a00);transform:scale(1)}50%{filter:brightness(1.06) drop-shadow(0 0 calc(var(--win-glow) * .5) #ffe18a80)}100%{filter:brightness(1.12) drop-shadow(0 0 var(--win-glow) #ffe18a);transform:scale(1.03)}}
+@keyframes winning-burst{0%{filter:brightness(1.12) drop-shadow(0 0 var(--win-glow) #ffe18a);transform:scale(1.03);opacity:1}40%{filter:brightness(1.18) drop-shadow(0 0 var(--win-glow) #ffe18a);transform:scale(1.05)}100%{filter:brightness(1.08) drop-shadow(0 0 0 #ffe18a00);transform:scale(.2);opacity:0}}
 @keyframes celebration-in{from{opacity:0;transform:translate(-50%,5px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes celebration-center{from{opacity:0;transform:translate(-50%,-40%) scale(.85)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes win-beam{0%{opacity:0;filter:blur(6px)}25%{opacity:.8;filter:blur(0)}100%{opacity:0;filter:blur(8px)}}
@@ -46,6 +78,7 @@
 @keyframes board-aura{0%,100%{box-shadow:0 0 0 transparent;border-color:var(--sand)}35%,65%{box-shadow:0 0 35px #ffc86466,0 0 65px #70d5ca33;border-color:#ffe3a0}}
 @keyframes cell-aura{0%,100%{background:var(--slot)}40%,65%{background:#fff8d5;box-shadow:inset 0 0 15px #ffe59b}}
 @keyframes game-aura{0%,100%{opacity:0}35%,65%{opacity:1}}
-@media(prefers-reduced-motion:reduce){.win-ring,.win-spark,.win-beam{display:none}.celebration-card,.tile.winning,.tile.winning.clear,.board.celebrating-all,.celebrating-all .cell,.game.celebrating-all::before{animation:none}.tile.winning{background:#fff2b5}.celebration-card{opacity:1}}
+@media(prefers-reduced-motion:reduce){.win-ring,.win-spark,.win-beam{display:none}.celebration-card,.tile.winning,.tile.winning.clear,.board.celebrating-all,.celebrating-all .cell,.game.celebrating-all::before{animation:none}.tile.winning{filter:brightness(1.12) drop-shadow(0 0 var(--win-glow) #ffe18a)}.celebration-card{opacity:1}}
 @media(prefers-reduced-motion:reduce){.win-glint{display:none}.score-reward,.combo-reward,.board.celebrating-line,.board.celebrating-combo{animation:none}.drag-chip{transform:translate(-50%,-50%)}}
 @media(prefers-reduced-motion:reduce){.spring-place-halo,.spring-mote{display:none}.tile.spring-placed,.tile.winning-line,.tile.winning-line.clear{animation:none;transform:none}.tile.winning-line.clear{opacity:0}}
+@media(prefers-reduced-motion:reduce){.celebration-burst{display:none}.celebrating-combo .celebration-card,.celebrating-all .celebration-card{animation:none}}

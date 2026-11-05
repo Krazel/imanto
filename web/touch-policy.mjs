@@ -1,6 +1,9 @@
 const editable='input,textarea,select,[contenteditable=true],[data-allow-copy]';
 export function installTouchPolicy(scope=globalThis){
   const doc=scope.document;
+  // Older iOS WebViews can deliver touch events without Pointer Events. Keep
+  // visual focus in the same touch mode without changing logical/VoiceOver focus.
+  doc.addEventListener('touchstart',()=>{doc.documentElement.dataset.input='touch';},{capture:true,passive:true});
   doc.addEventListener('pointerdown',e=>{doc.documentElement.dataset.input=e.pointerType==='touch'||e.pointerType==='pen'?'touch':'pointer';},true);
   doc.addEventListener('keydown',e=>{if(['Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))doc.documentElement.dataset.input='keyboard';},true);
   for(const name of ['selectstart','contextmenu','dragstart'])doc.addEventListener(name,e=>{

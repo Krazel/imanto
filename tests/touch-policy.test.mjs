@@ -3,6 +3,7 @@ import {installTouchPolicy} from '../web/touch-policy.mjs';
 test('touch decorations stay separate from keyboard navigation',()=>{
  const events={},document={documentElement:{dataset:{}},addEventListener:(name,fn)=>events[name]=fn};installTouchPolicy({document});
  events.pointerdown({pointerType:'touch'});assert.equal(document.documentElement.dataset.input,'touch');events.keydown({key:'Tab'});assert.equal(document.documentElement.dataset.input,'keyboard');
+ events.pointerdown({pointerType:'mouse'});assert.equal(document.documentElement.dataset.input,'pointer');events.touchstart();assert.equal(document.documentElement.dataset.input,'touch');events.keydown({key:'ArrowDown'});assert.equal(document.documentElement.dataset.input,'keyboard');
 });
 test('game text and icons block accidental browser actions; fields, copy regions and links remain legitimate',()=>{
  const events={},document={documentElement:{dataset:{}},addEventListener:(name,fn)=>events[name]=fn};installTouchPolicy({document});
