@@ -108,7 +108,9 @@ import AVFoundation
         web.reload()
         var ready = false
         for _ in 0..<600 {
-            if let value = try? await web.evaluateJavaScript("window.imantoStreakTest===true && document.querySelector('#board')?.getAttribute('aria-busy')==='false'"), (value as? Bool) == true { ready = true; break }
+            // The static HTML already says aria-busy=false before the large
+            // offline bundle has built the tray. Wait for a usable gesture target.
+            if !web.isLoading, let value = try? await web.evaluateJavaScript("window.imantoStreakTest===true && document.querySelectorAll('#cells button').length===25 && document.querySelector('#board')?.getAttribute('aria-busy')==='false' && !!document.querySelector('#tray button:not(:disabled) .chip')"), (value as? Bool) == true { ready = true; break }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
         let diagnostics = try? await web.evaluateJavaScript("JSON.stringify({marker:window.imantoStreakTest,busy:document.querySelector('#board')?.getAttribute('aria-busy'),state:localStorage.getItem('krazel-imanes-main-v6')})")
