@@ -1,0 +1,26 @@
+name: Imanto App Store media
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci && npm run build:ios
+      - run: brew install xcodegen
+      - run: node scripts/capture-store-media.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Imanto-StoreMedia-${{ github.sha }}
+          path: artifacts/store-media/
+          retention-days: 1
