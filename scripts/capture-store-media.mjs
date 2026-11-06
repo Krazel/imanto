@@ -33,7 +33,8 @@ for(const [kind,device] of targets){
   if(device.state!=='Booted')run('xcrun',['simctl','boot',id]);
   run('xcrun',['simctl','bootstatus',id,'-b']);
   run('xcrun',['simctl','status_bar',id,'override','--time','9:41','--dataNetwork','wifi','--wifiMode','active',
-    '--wifiBars','3','--cellularMode','active','--cellularBars','4','--batteryState','unplugged','--batteryLevel','100']);
+    '--wifiBars','3','--cellularMode',kind==='iphone'?'active':'notSupported','--cellularBars','4',
+    '--batteryState','discharging','--batteryLevel','100']);
   const args=['-project','ios/Imanto.xcodeproj','-scheme','Imanto','-destination',
     `platform=iOS Simulator,arch=${process.arch==='arm64'?'arm64':'x86_64'},id=${id}`,'-derivedDataPath',derived,
     '-parallel-testing-enabled','NO','-only-testing:ImantoTests/StoreMediaCapture','CODE_SIGNING_ALLOWED=NO'];
