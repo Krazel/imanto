@@ -125,6 +125,42 @@ html[data-banner-visible] dialog{bottom:var(--imanto-banner-height);max-height:c
 #menu .remove-ads{display:flex;align-items:center;justify-content:center;gap:13px;width:100%;min-height:64px;margin:14px 0 0;padding:15px 18px;border:1px solid #e5ac39;border-radius:18px;background:linear-gradient(110deg,#f5bb4b,#f4b644);color:#432611;font-size:19px;font-weight:800;box-shadow:inset 0 1px #fff7}
 #menu .remove-ads>i[data-icon]{width:30px;height:30px;margin:0;flex:none}
 
+#menu[data-mode=pause] .dialog-content{padding-block:18px 16px}
+#menu[data-mode=pause] .eyebrow{margin-bottom:8px}
+#menu[data-mode=pause] .menu-stats{margin-block:12px 8px;gap:6px}
+#menu[data-mode=pause] .menu-stats>div{padding-block:8px}
+#menu[data-mode=pause] :is(.primary,.secondary){margin-top:6px;min-height:46px;padding-block:9px}
+#menu[data-mode=pause] .six-link{margin:0}
+#menu[data-mode=pause] .menu-navigation{margin-top:6px}
+#menu[data-mode=pause] .screen-link{min-height:56px;padding-block:7px;gap:4px}
+#menu[data-mode=pause] .remove-ads{min-height:54px;margin-top:8px;padding-block:10px}
+
+@media(max-height:680px){
+  #menu[data-mode=pause] .block-mark{display:none}
+  #menu[data-mode=pause] .menu-stats:not(:has([data-long=true])){
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  #menu[data-mode=pause] .menu-stats span{font-size:12px}
+}
+
+@media(max-height:600px){
+  #menu[data-mode=pause] :is(.eyebrow,#menu-copy){display:none}
+  #menu[data-mode=pause] .menu-stats:has([data-long=true])>div{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    padding-inline:10px;
+  }
+  #menu[data-mode=pause] .menu-stats:has([data-long=true]) span{
+    display:block;
+    font-size:11px;
+    overflow-wrap:anywhere;
+  }
+  #menu[data-mode=pause] .menu-stats:has([data-long=true]) span i{display:none}
+  #menu[data-mode=pause] :is(#menu-score,#menu-best)[data-long=true]{min-width:0;font-size:15px}
+}
+
 [data-board-size="6"] .line-example i{width:calc((100% - 15px)/6)}
 [data-board-size="6"] .heading h1{font-size:30px}
 

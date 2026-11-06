@@ -30,4 +30,47 @@ function prepare(){if(!doc||doc.querySelector('#board').getAttribute('aria-busy'
 function play(){if(!doc)return;const music=doc.querySelector('#background-music');if(music)music.muted=true;doc.dispatchEvent(new frame.contentWindow.Event('pointerdown',{bubbles:true}));doc.querySelector(`[data-demo="${scene}"]`).click();}
 frame.addEventListener('load',()=>{doc=frame.contentDocument;if(!doc?.querySelector('#board'))return;const link=doc.createElement('link');link.rel='stylesheet';link.href='block-experiments.css';doc.head.append(link);const style=doc.createElement('style');style.textContent='html,body,body.is-capture{width:100%!important;height:100%!important;min-height:0!important;margin:0!important;padding:0!important;background:#fff7eb!important;overflow:hidden!important}.game,.is-capture .game{width:100%!important;max-width:none!important;padding:8px!important;margin:0!important}.game>:not(.board),.lab-panel{display:none!important}.board,.is-capture .board{width:100%!important;max-width:none!important;margin:0!important}';doc.head.append(style);doc.documentElement.dataset.blockMaterial=selected;applyBlockPalette(palette,doc.documentElement);observer?.disconnect();observer=new frame.contentWindow.MutationObserver(()=>{if(doc.documentElement.dataset.blockMaterial!==selected)doc.documentElement.dataset.blockMaterial=selected;if(doc.documentElement.dataset.blockPalette!==palette)applyBlockPalette(palette,doc.documentElement);refreshBusy();});observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-block-material','data-block-palette']});observer.observe(doc.querySelector('#board'),{attributes:true,attributeFilter:['aria-busy']});buttons.forEach(b=>b.disabled=false);status.textContent=copy.ready;});
 document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{scene=b.dataset.scene;document.querySelectorAll('[data-scene]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));play();});document.querySelector('[data-scene=single]').setAttribute('aria-pressed','true');document.querySelector('#replay').onclick=play;document.querySelector('#prepare').onclick=prepare;
+if(new URLSearchParams(location.search).get('fit')==='1'){
+  const sizeReview=document.querySelector('#size-review');
+  const sizePicker=document.querySelector('#size-picker');
+  const cornerPicker=document.querySelector('#corner-picker');
+  const sizeOutline=document.querySelector('#size-outline');
+  sizeReview.hidden=false;
+  document.querySelector('#size-label').textContent=es?'Tamaño del bloque':'Block size';
+  document.querySelector('#corner-label').textContent=es?'Esquinas de la casilla':'Cell corners';
+  if(!es){
+    const cornerNames=['Original','Matched rounding','Matched rounding and subtle base'];
+    Array.from(cornerPicker.options).forEach((option,i)=>option.textContent=cornerNames[i]);
+  }
+  document.querySelector('#size-outline-label').textContent=es?'Mostrar el contorno de la casilla':'Show cell outline';
+  const syncSize=()=>{
+    if(!doc)return;
+    const root=doc.documentElement;
+    root.style.setProperty('--board-sprite-scale',sizePicker.value);
+    root.dataset.reviewCorners=cornerPicker.value;
+    root.toggleAttribute('data-size-review-outline',sizeOutline.checked);
+  };
+  sizePicker.addEventListener('change',syncSize);
+  cornerPicker.addEventListener('change',syncSize);
+  sizeOutline.addEventListener('change',syncSize);
+  frame.addEventListener('load',()=>{
+    if(!doc)return;
+    const style=doc.createElement('style');
+    style.textContent=`
+      [data-review-corners=original]{--occupied-slot-radius:10px}
+      [data-block-material^=special-][data-review-corners=soft] .cell:not(.empty){
+        background:color-mix(in srgb,var(--slot) 40%,var(--sand));box-shadow:none;
+      }
+      [data-size-review-outline] .pieces .tile::after{
+        content:"";position:absolute;inset:0;border:1px dashed #432611;
+        border-radius:var(--occupied-slot-radius,var(--material-slot-radius,max(10px,22%)));
+        box-shadow:none;background:none;pointer-events:none;
+      }
+      [data-block-material]:not([data-block-material^=special-])[data-size-review-outline] .pieces .tile::after{border-radius:inherit}
+    `;
+    doc.head.append(style);
+    syncSize();
+    if(location.hash==='#size-review')sizeReview.scrollIntoView({block:'start'});
+  });
+}
 choose(selected);buttons.forEach(b=>b.disabled=true);frame.src=`./?effects=single&capture=1&presentation=1&lang=${es?'es':'en'}`;

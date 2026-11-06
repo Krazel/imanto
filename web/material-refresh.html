@@ -9,6 +9,11 @@
   <section class="preview-panel" aria-labelledby="preview-name"><div class="preview-heading"><div><p class="eyebrow" data-copy="preview">PRUEBA EN EL TABLERO</p><h2 id="preview-name"></h2></div><span class="tag" id="preview-tag"></span></div><p id="preview-description"></p>
     <label class="material-picker"><span data-copy="picker">Cambiar material</span><select id="material-picker"></select></label>
     <label class="material-picker"><span id="palette-label">Paleta de colores</span><select id="palette-picker"></select></label>
+    <div id="size-review" hidden>
+      <label class="material-picker"><span id="size-label">Tamaño del bloque</span><select id="size-picker"><option value="1">Original · 100%</option><option value="1.04">+4%</option><option value="1.06">+6%</option><option value="1.08" selected>+8%</option></select></label>
+      <label class="material-picker"><span id="corner-label">Esquinas de la casilla</span><select id="corner-picker"><option value="original">Originales</option><option value="rounded" selected>Redondeo adaptado</option><option value="soft">Redondeo y base discreta</option></select></label>
+      <label class="material-picker"><span id="size-outline-label">Mostrar el contorno de la casilla</span><input id="size-outline" type="checkbox"></label>
+    </div>
     <iframe id="live-preview" title="Tablero de prueba de Imanto" src="about:blank"></iframe>
     <div class="scene-buttons"><button data-scene="single" data-copy="single">Completar una línea</button><button data-scene="double" data-copy="double">Combo de dos</button><button data-scene="all" data-copy="all">Limpiar tablero</button></div>
     <div class="playback"><button id="replay" class="primary" data-copy="repeat">Repetir animación</button><button id="prepare" data-copy="prepare">Preparar tablero</button></div>

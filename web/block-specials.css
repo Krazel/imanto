@@ -3,6 +3,12 @@
 
 [data-block-material^=special-] :is(.tile,.chip,.forecast-chip,.drag-chip),.material-preview[data-block-material^=special-]>.material-swatch{--sprite-size-x:var(--atlas-coral-width,413.861386%);--sprite-x:var(--atlas-coral-x,2.208202%);background:transparent;border:0;box-shadow:none}
 [data-block-material^=special-] :is(.tile,.chip,.forecast-chip,.drag-chip)::before,.material-preview[data-block-material^=special-]>.material-swatch::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background-image:var(--block-sprite-atlas,var(--sprite-image-original));background-size:var(--sprite-size-x) var(--sprite-size-y);background-position:var(--sprite-x) var(--sprite-y);background-repeat:no-repeat;filter:none;border:0;box-shadow:none}
+/* Raster art has transparent margins and rounder corners than the original tiles. */
+[data-block-material^=special-] :is(.pieces,.preview) .tile::before{scale:var(--board-sprite-scale,1.08)}
+[data-block-material=special-sand]{--material-slot-radius:max(10px,20%)}
+[data-block-material^=special-] .cell:not(.empty){
+  border-radius:var(--occupied-slot-radius,var(--material-slot-radius,max(10px,22%)));
+}
 [data-block-material^=special-] :is(.tile,.chip,.forecast-chip,.drag-chip).honey,.material-preview[data-block-material^=special-]>.material-swatch.honey{--sprite-size-x:var(--atlas-honey-width,418%);--sprite-x:var(--atlas-honey-x,34.171908%)}
 [data-block-material^=special-] :is(.tile,.chip,.forecast-chip,.drag-chip).teal,.material-preview[data-block-material^=special-]>.material-swatch.teal{--sprite-size-x:var(--atlas-teal-width,419.397993%);--sprite-x:var(--atlas-teal-x,65.759162%)}
 [data-block-material^=special-] :is(.tile,.chip,.forecast-chip,.drag-chip).violet,.material-preview[data-block-material^=special-]>.material-swatch.violet{--sprite-size-x:var(--atlas-violet-width,415.231788%);--sprite-x:var(--atlas-violet-x,97.794118%)}

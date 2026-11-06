@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   candidate:
-    if: github.event.repository.private == true && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    if: github.repository == 'Krazel/imanto' && github.event.repository.private == false && github.actor == github.repository_owner && github.ref == 'refs/heads/main'
     runs-on: macos-26
     environment: app-store-production
     timeout-minutes: 45
