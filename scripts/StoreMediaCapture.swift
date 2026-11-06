@@ -10,6 +10,7 @@ import XCTest
         let controller = try XCTUnwrap(window.rootViewController as? GameController)
         let web = try XCTUnwrap(controller.web)
         let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        print("IMANTO_STORE_DOCUMENTS=\(folder.path)")
         let scripts = web.configuration.userContentController
         let original = scripts.userScripts
         defer {
@@ -46,7 +47,7 @@ import XCTest
             let video = window.traitCollection.userInterfaceIdiom == .phone
             if video {
                 try Data().write(to: folder.appendingPathComponent("store-\(language).start"))
-                for _ in 0..<100 {
+                for _ in 0..<200 {
                     if FileManager.default.fileExists(atPath: folder.appendingPathComponent("store-\(language).ready").path) { break }
                     try await settle(0.1)
                 }

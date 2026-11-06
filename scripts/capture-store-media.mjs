@@ -41,48 +41,62 @@ for(const [kind,device] of targets){
   console.log('Building store capture for',device.name);
   run('xcodebuild',['build-for-testing',...args]);
   run('xcrun',['simctl','install',id,derived+'/Build/Products/Debug-iphonesimulator/Imanto.app']);
-  const container=run('xcrun',['simctl','get_app_container',id,product,'data']);
-  const docs=path.join(container,'Documents');
-  fs.mkdirSync(docs,{recursive:true});
-  const log=fs.openSync(path.join(output,kind+'-capture.log'),'w');
+  const logPath=path.join(output,kind+'-capture.log');
+  const log=fs.openSync(logPath,'w');
+  // XCTest may reinstall the host, invalidating the container observed before
+  // test-without-building. Use the app's Documents path from the running test.
+  const getDocuments=()=>{
+    const logged=fs.readFileSync(logPath,'utf8').match(/^IMANTO_STORE_DOCUMENTS=(.+)$/m)?.[1]?.trim();
+    if(logged&&fs.existsSync(logged))return logged;
+    const result=spawnSync('xcrun',['simctl','get_app_container',id,product,'data'],{encoding:'utf8'});
+    return result.status===0?path.join(result.stdout.trim(),'Documents'):null;
+  };
   const test=spawn('xcodebuild',['test-without-building',...args],{stdio:['ignore',log,log]});
   const done=finish(test);
   let active=null;
   try{
     if(kind==='iphone')for(const language of languages){
-      const base=path.join(docs,'store-'+language);
-      const waitFor=async file=>{
-        const deadline=Date.now()+160_000;
-        while(!fs.existsSync(file)){
-          assert(test.exitCode===null&&Date.now()<deadline,'Missing capture marker '+path.basename(file));
-          await sleep(100);
-        }
+      const waitFor=async suffix=>{
+        const deadline=Date.now()+200_000;
+        const name='store-'+language+suffix;
+        do {
+          const docs=getDocuments();
+          const file=docs&&path.join(docs,name);
+          if(file&&fs.existsSync(file))return file;
+          await sleep(450);
+        } while(test.exitCode===null&&Date.now()<deadline);
+        throw new Error('Missing capture marker '+name);
       };
-      await waitFor(base+'.start');
+      const start=await waitFor('.start');
       const movie=path.join(output,kind+'-'+language+'-raw.mov');
       const recorder=spawn('xcrun',['simctl','io',id,'recordVideo','--codec=h264','--force',movie],{stdio:['ignore',log,log]});
       const captured=finish(recorder);
       active=recorder;
       await sleep(800);
-      fs.writeFileSync(base+'.ready','');
-      await waitFor(base+'.end');
+      fs.writeFileSync(start.replace(/\.start$/,'.ready'),'');
+      await waitFor('.end');
       recorder.kill('SIGINT');
       await captured;
       active=null;
       assert(fs.statSync(movie).size>100_000,'Native gameplay recording is empty');
     }
     assert.equal(await done,0,kind+' native capture test failed');
-    for(const name of fs.readdirSync(docs).filter(x=>/^store-(en|es)-\d{2}-.+\.png$/.test(x))){
-      fs.copyFileSync(path.join(docs,name),path.join(output,kind+'-'+name));
-    }
     receipts.push({kind,device:device.name});
     console.log('Captured both locales on',device.name);
   }finally{
+    const docs=getDocuments();
+    if(docs&&fs.existsSync(docs)){
+      for(const name of fs.readdirSync(docs).filter(x=>/^store-(en|es)-\d{2}-.+\.png$/.test(x))){
+        fs.copyFileSync(path.join(docs,name),path.join(output,kind+'-'+name));
+      }
+    }
     if(active)active.kill('SIGINT');
     if(test.exitCode===null)test.kill('SIGTERM');
     fs.closeSync(log);
     run('xcrun',['simctl','shutdown',id]);
   }
+  const count=fs.readdirSync(output).filter(name=>name.startsWith(kind+'-store-')&&name.endsWith('.png')).length;
+  assert(count>=(kind==='ipad'?7:6),'Missing native stills for '+kind);
 }
 const runtime=fs.readFileSync('ios/Web/index.html');
 fs.writeFileSync(path.join(output,'capture.json'),JSON.stringify({commit:process.env.GITHUB_SHA,
