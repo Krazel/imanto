@@ -38,20 +38,25 @@ import XCTest
             """
             scripts.addUserScript(WKUserScript(source: setup, injectionTime: .atDocumentStart, forMainFrameOnly: true))
             web.reload()
-            try await wait(web, "window.imantoStoreCapture === '\(language)' && document.documentElement.dataset.blockMaterial === 'special-liquid' && !document.querySelector('#pause')?.disabled && document.querySelectorAll('.cell').length === 25")
+            try await wait(web, "window.imantoStoreCapture === '\(language)' && document.documentElement.dataset.blockMaterial === 'special-liquid' && !document.querySelector('#pause')?.disabled && document.querySelectorAll('.cell').length === 25 && document.querySelector('#score')?.textContent === '150' && document.querySelector('#board')?.getAttribute('aria-busy') === 'false'")
             let fit = try await web.evaluateJavaScript("parseFloat(getComputedStyle(document.querySelector('.pieces .tile'),'::before').scale)") as? Double
             XCTAssertEqual(fit, 1.08)
-            try await settle(0.4)
+            _ = try await web.takeSnapshot(with: nil)
+            try await settle(2.5)
             try capture(window, to: folder.appendingPathComponent("store-\(language)-01-five.png"))
 
             let video = window.traitCollection.userInterfaceIdiom == .phone
             if video {
                 try Data().write(to: folder.appendingPathComponent("store-\(language).start"))
-                for _ in 0..<200 {
-                    if FileManager.default.fileExists(atPath: folder.appendingPathComponent("store-\(language).ready").path) { break }
+                let ready = folder.appendingPathComponent("store-\(language).ready").path
+                for _ in 0..<900 {
+                    if FileManager.default.fileExists(atPath: ready) { break }
                     try await settle(0.1)
                 }
-                try await settle(2.4)
+                guard FileManager.default.fileExists(atPath: ready) else {
+                    throw NSError(domain: "ImantoStoreCapture", code: 2, userInfo: [NSLocalizedDescriptionKey: "Recorder did not acknowledge \(language)"])
+                }
+                try await settle(3.0)
             }
             _ = try await web.evaluateJavaScript("document.querySelector('#cells [data-at=\"12\"]').click();true")
             try await wait(web, "document.querySelector('#score')?.textContent==='300' && document.querySelector('#board')?.getAttribute('aria-busy')==='false'")

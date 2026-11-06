@@ -69,10 +69,17 @@ for(const [kind,device] of targets){
       };
       const start=await waitFor('.start');
       const movie=path.join(output,kind+'-'+language+'-raw.mov');
-      const recorder=spawn('xcrun',['simctl','io',id,'recordVideo','--codec=h264','--force',movie],{stdio:['ignore',log,log]});
+      const recorderLogPath=path.join(output,kind+'-'+language+'-recorder.log');
+      const recorderLog=fs.openSync(recorderLogPath,'w');
+      const recorder=spawn('xcrun',['simctl','io',id,'recordVideo','--codec=h264','--force',movie],{stdio:['ignore',recorderLog,recorderLog]});
+      fs.closeSync(recorderLog);
       const captured=finish(recorder);
       active=recorder;
-      await sleep(800);
+      const recordingDeadline=Date.now()+85_000;
+      while(!fs.readFileSync(recorderLogPath,'utf8').includes('Recording started')){
+        assert(recorder.exitCode===null&&Date.now()<recordingDeadline,'Simulator did not start recording '+language);
+        await sleep(150);
+      }
       fs.writeFileSync(start.replace(/\.start$/,'.ready'),'');
       await waitFor('.end');
       recorder.kill('SIGINT');
