@@ -41,7 +41,12 @@ import XCTest
             try await wait(web, "window.imantoStoreCapture === '\(language)' && document.documentElement.dataset.blockMaterial === 'special-liquid' && !document.querySelector('#pause')?.disabled && document.querySelectorAll('.cell').length === 25 && document.querySelector('#score')?.textContent === '150' && document.querySelector('#board')?.getAttribute('aria-busy') === 'false'")
             let fit = try await web.evaluateJavaScript("parseFloat(getComputedStyle(document.querySelector('.pieces .tile'),'::before').scale)") as? Double
             XCTAssertEqual(fit, 1.08)
-            _ = try await web.takeSnapshot(with: nil)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                web.takeSnapshot(with: nil) { _, error in
+                    if let error { continuation.resume(throwing: error) }
+                    else { continuation.resume(returning: ()) }
+                }
+            }
             try await settle(2.5)
             try capture(window, to: folder.appendingPathComponent("store-\(language)-01-five.png"))
 
