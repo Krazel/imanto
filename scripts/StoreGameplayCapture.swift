@@ -47,32 +47,51 @@ import XCTest
               localStorage.setItem(key, JSON.stringify(state));
               window.imantoCaptureLanguage = '\(language)';
               window.imantoDragSamples = [];
-              window.imantoPlayDrag = (option, route, milliseconds, serial) => {
+              window.imantoPlayDrag = (option, destination, milliseconds, serial) => {
                 const tray = document.querySelector('#tray');
                 const button = document.querySelector('.choice[data-option="'+option+'"]');
                 const cells = [...document.querySelectorAll('#cells .cell')];
                 const center = node => {const r=node.getBoundingClientRect(); return [r.x+r.width/2,r.y+r.height/2];};
-                const points = [center(button), ...route.map(index => center(cells[index]))];
+                const start = center(button), end = center(cells[destination]);
+                const dx=end[0]-start[0],dy=end[1]-start[1],distance=Math.hypot(dx,dy);
+                // A shallow, continuous hand arc; no intermediate cells or sharp corners.
+                const bow=Math.min(18,distance*0.065)*(dx<0?-1:1);
+                const normal=distance ? [-dy/distance,dx/distance] : [0,0];
+                const controls=[0.32,0.68].map(fraction=>[
+                  start[0]+dx*fraction+normal[0]*bow,
+                  start[1]+dy*fraction+normal[1]*bow
+                ]);
+                const pickup=90, release=70, travel=milliseconds-pickup-release;
                 const event = (type, point, target) => target.dispatchEvent(new PointerEvent(type,{
                   bubbles:true,cancelable:true,pointerType:'mouse',pointerId:19,isPrimary:true,button:0,
                   buttons:type==='pointerup'?0:1,clientX:point[0],clientY:point[1]
                 }));
-                event('pointerdown',points[0],button);
-                let started, previous, intervals=[];
+                const started=performance.now(), epoch=performance.timeOrigin;
+                const sample={serial,option,destination,requestedDurationMs:milliseconds,
+                  pickupMs:pickup,travelMs:travel,releaseMs:release,
+                  pointerDown:Date.now()/1000,performanceTimeOriginMs:epoch,
+                  monotonicStartMs:started,intervals:[],points:[]};
+                event('pointerdown',start,button);
+                let previous;
                 const advance = now => {
-                  started ??= now;
-                  if (previous !== undefined) intervals.push(now-previous);
+                  if (previous !== undefined) sample.intervals.push(now-previous);
                   previous = now;
-                  const progress = Math.min(1,(now-started)/milliseconds)*(points.length-1);
-                  const from = Math.min(points.length-2, Math.floor(progress));
-                  const fraction = progress-from;
-                  const a=points[from],b=points[from+1];
-                  const point = [a[0]+(b[0]-a[0])*fraction,a[1]+(b[1]-a[1])*fraction];
+                  const elapsed=now-started;
+                  const progress=Math.max(0,Math.min(1,(elapsed-pickup)/travel));
+                  // Minimum-jerk timing starts and stops softly, without constant-speed slides.
+                  const t=progress*progress*progress*(10+progress*(-15+6*progress)),u=1-t;
+                  const point=start.map((value,axis)=>u*u*u*value+
+                    3*u*u*t*controls[0][axis]+3*u*t*t*controls[1][axis]+t*t*t*end[axis]);
+                  if(progress>0 && sample.motionStart===undefined) sample.motionStart=Date.now()/1000;
+                  if(progress===1 && sample.motionEnd===undefined) sample.motionEnd=Date.now()/1000;
+                  sample.points.push({elapsedMs:elapsed,x:point[0],y:point[1]});
                   event('pointermove',point,tray);
-                  if (progress < points.length-1) requestAnimationFrame(advance);
+                  if (elapsed < milliseconds) requestAnimationFrame(advance);
                   else {
-                    event('pointerup',point,tray);
-                    window.imantoDragSamples.push({serial,intervals});
+                    sample.pointerUp=Date.now()/1000;
+                    sample.actualDurationMs=performance.now()-started;
+                    event('pointerup',end,tray);
+                    window.imantoDragSamples.push(sample);
                     window.imantoCompletedDrag=serial;
                   }
                 };
@@ -85,6 +104,13 @@ import XCTest
             web.reload()
             try await wait(web, "window.imantoCaptureLanguage === '\(language)' && document.querySelectorAll('#cells .cell').length === 25 && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
             try await settle(0.8)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                web.takeSnapshot(with: nil) { _, error in
+                    if let error { continuation.resume(throwing: error) }
+                    else { continuation.resume(returning: ()) }
+                }
+            }
+            try await settle(0.5)
             audio.events.removeAll()
             let prefix = folder.appendingPathComponent("store-\(language)")
             try Data().write(to: prefix.appendingPathExtension("start"))
@@ -96,10 +122,10 @@ import XCTest
             XCTAssertTrue(FileManager.default.fileExists(atPath: ready))
             try await settle(0.6)
             var marks = ["classicStart": Date().timeIntervalSince1970]
-            try await drag(web, 0, [22, 21, 7, 2], 1650, 1, 1)
-            try await drag(web, 1, [17, 16], 1350, 2, 2)
-            try await drag(web, 2, [14, 13], 1150, 3, 3)
-            try await drag(web, 0, [17, 12], 1250, 4, 4)
+            try await drag(web, 0, 2, 1400, 1, 1)
+            try await drag(web, 1, 16, 1050, 2, 2)
+            try await drag(web, 2, 13, 1050, 3, 3)
+            try await drag(web, 0, 12, 1150, 4, 4)
             try await wait(web, "document.querySelector('#score').textContent === '50'")
             try await settle(0.65)
             marks["classicEnd"] = Date().timeIntervalSince1970
@@ -108,10 +134,10 @@ import XCTest
             try await wait(web, "document.querySelectorAll('#cells .cell').length === 36 && document.documentElement.dataset.blockMaterial === 'special-glass' && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
             try await settle(0.8)
             marks["glassStart"] = Date().timeIntervalSince1970
-            try await drag(web, 0, [33, 23, 9], 1550, 1, 5)
-            try await drag(web, 1, [29, 26], 1300, 2, 6)
-            try await drag(web, 2, [28, 16], 1250, 3, 7)
-            try await drag(web, 0, [22, 17], 1200, 4, 8)
+            try await drag(web, 0, 9, 1400, 1, 5)
+            try await drag(web, 1, 26, 1050, 2, 6)
+            try await drag(web, 2, 16, 1100, 3, 7)
+            try await drag(web, 0, 17, 1100, 4, 8)
             try await wait(web, "document.querySelector('#score').textContent === '50'")
             try await settle(1.1)
             marks["glassEnd"] = Date().timeIntervalSince1970
@@ -128,10 +154,13 @@ import XCTest
         }
     }
 
-    private func drag(_ web: WKWebView, _ option: Int, _ route: [Int], _ milliseconds: Int, _ turn: Int, _ serial: Int) async throws {
-        let positions = route.map { String($0) }.joined(separator: ",")
-        _ = try await web.evaluateJavaScript("window.imantoPlayDrag(\(option), [\(positions)], \(milliseconds), \(serial))")
+    private func drag(_ web: WKWebView, _ option: Int, _ destination: Int, _ milliseconds: Int, _ turn: Int, _ serial: Int) async throws {
+        // Only the demonstration gesture is captured slowly; game resolution keeps its real timing.
+        let captureRate = 2.0
+        let captureMilliseconds = Int(Double(milliseconds) * captureRate)
+        _ = try await web.evaluateJavaScript("window.imantoPlayDrag(\(option), \(destination), \(captureMilliseconds), \(serial))")
         try await wait(web, "window.imantoCompletedDrag === \(serial) && document.querySelector('#board').getAttribute('aria-busy') === 'false' && JSON.parse(localStorage.getItem(location.search.includes('size=6') ? 'imanto-six-game-v1' : 'krazel-imanes-main-v6')).turns === \(turn)")
+        _ = try await web.evaluateJavaScript("Object.assign(window.imantoDragSamples.find(sample => sample.serial === \(serial)), {boardReady:Date.now()/1000,captureRate:\(captureRate),presentationDurationMs:\(milliseconds)})")
         try await settle(0.15)
     }
 
