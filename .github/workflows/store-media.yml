@@ -1,6 +1,11 @@
 name: Imanto App Store media
 on:
   workflow_dispatch:
+    inputs:
+      gameplay:
+        description: Capture the gameplay trailer only
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -17,7 +22,7 @@ jobs:
           node-version: '22'
       - run: npm ci && npm run build:ios
       - run: brew install xcodegen
-      - run: node scripts/capture-store-media.mjs
+      - run: node scripts/capture-store-media.mjs ${{ inputs.gameplay && '--gameplay' || '' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

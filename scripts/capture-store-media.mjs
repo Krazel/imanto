@@ -9,6 +9,7 @@ const output = 'artifacts/store-media';
 const derived = 'artifacts/StoreDerivedData';
 const product = 'com.krazel.imanto';
 const languages = ['en','es'];
+const gameplay = process.argv.includes('--gameplay');
 const run = (command,args,cwd) => {
   const result=spawnSync(command,args,{cwd,encoding:'utf8',maxBuffer:32*1024*1024});
   if(result.error)throw result.error;
@@ -20,14 +21,14 @@ const finish = child => new Promise((resolve,reject)=>{
   child.once('exit',code=>resolve(code));
 });
 fs.mkdirSync(output,{recursive:true});
-fs.copyFileSync('scripts/StoreMediaCapture.swift','ios/Tests/StoreMediaCapture.swift');
+fs.copyFileSync(gameplay?'scripts/StoreGameplayCapture.swift':'scripts/StoreMediaCapture.swift','ios/Tests/StoreMediaCapture.swift');
 run('xcodegen',['generate','--spec','project.store.yml'],'ios');
 const devices = Object.values(JSON.parse(run('xcrun',['simctl','list','devices','available','-j'])).devices).flat();
 const targets = [
   ['iphone',devices.find(x=>x.name==='iPhone 17 Pro')??devices.find(x=>x.name==='iPhone 16 Pro')],
   ['ipad',devices.find(x=>x.name.startsWith('iPad Pro 13-inch'))],
-];
-assert(targets.every(([,device])=>device),'Required iPhone and 13-inch iPad simulators');
+].filter(([kind])=>!gameplay||kind==='iphone');
+assert(targets.every(([,device])=>device),'Required store simulators');
 const receipts=[];
 for(const [kind,device] of targets){
   const id=device.udid;
@@ -112,7 +113,7 @@ for(const [kind,device] of targets){
     run('xcrun',['simctl','shutdown',id]);
   }
   const count=fs.readdirSync(output).filter(name=>name.startsWith(kind+'-store-')&&name.endsWith('.png')).length;
-  assert.equal(count,8,'Missing native gameplay stills for '+kind);
+  if(!gameplay)assert.equal(count,8,'Missing native gameplay stills for '+kind);
 }
 const runtime=fs.readFileSync('ios/Web/index.html');
 fs.writeFileSync(path.join(output,'capture.json'),JSON.stringify({commit:process.env.GITHUB_SHA,

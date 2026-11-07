@@ -1,0 +1,162 @@
+import Foundation
+import UIKit
+import WebKit
+import XCTest
+@testable import Imanto
+
+@MainActor final class StoreMediaCapture: XCTestCase {
+    func testCaptureStoreMedia() async throws {
+        let window = try XCTUnwrap((UIApplication.shared.delegate as? AppDelegate)?.window)
+        let controller = try XCTUnwrap(window.rootViewController as? GameController)
+        let web = try XCTUnwrap(controller.web)
+        let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        print("IMANTO_STORE_DOCUMENTS=\(folder.path)")
+        let scripts = web.configuration.userContentController
+        let original = scripts.userScripts
+        let audio = StoreGameplayAudio(controller)
+        scripts.removeScriptMessageHandler(forName: "imantoAudio")
+        scripts.add(audio, name: "imantoAudio")
+        defer {
+            scripts.removeScriptMessageHandler(forName: "imantoAudio")
+            scripts.removeAllUserScripts()
+            original.forEach { scripts.addUserScript($0) }
+        }
+        let fixtures = try ["streak", "six"].map { name in
+            try String(contentsOf: XCTUnwrap(Bundle(for: Self.self).url(forResource: name, withExtension: "json")), encoding: .utf8)
+        }
+        for language in ["en", "es"] {
+            scripts.removeAllUserScripts()
+            original.forEach { scripts.addUserScript($0) }
+            let setup = """
+            (() => {
+              localStorage.setItem('imanto-language-v1', '\(language)');
+              const six = new URLSearchParams(location.search).get('size') === '6';
+              const state = six ? \(fixtures[1]) : \(fixtures[0]);
+              state.blockAppearance = {material:six ? 'special-glass' : 'classic', palette:'original'};
+              state.board[six ? 16 : 13] = null;
+              const extra = six ? [[2,'teal'],[7,'honey'],[21,'violet'],[27,'teal'],[32,'honey']]
+                                : [[3,'honey'],[6,'violet'],[18,'teal'],[24,'honey']];
+              for (const [index,color] of extra) state.board[index] = {id:state.nextId++,color};
+              state.round = 4;
+              state.score = 0;
+              state.turns = 0;
+              state.combo = {count:0,lastRound:null};
+              state.tray.forEach((piece,index) => piece.color = ['teal','honey','coral'][index]);
+              state.nextTray.forEach(piece => piece.color = 'coral');
+              const key = six ? 'imanto-six-game-v1' : 'krazel-imanes-main-v6';
+              localStorage.setItem(key, JSON.stringify(state));
+              window.imantoCaptureLanguage = '\(language)';
+              window.imantoDragSamples = [];
+              window.imantoPlayDrag = (option, route, milliseconds, serial) => {
+                const tray = document.querySelector('#tray');
+                const button = document.querySelector('.choice[data-option="'+option+'"]');
+                const cells = [...document.querySelectorAll('#cells .cell')];
+                const center = node => {const r=node.getBoundingClientRect(); return [r.x+r.width/2,r.y+r.height/2];};
+                const points = [center(button), ...route.map(index => center(cells[index]))];
+                const event = (type, point, target) => target.dispatchEvent(new PointerEvent(type,{
+                  bubbles:true,cancelable:true,pointerType:'mouse',pointerId:19,isPrimary:true,button:0,
+                  buttons:type==='pointerup'?0:1,clientX:point[0],clientY:point[1]
+                }));
+                event('pointerdown',points[0],button);
+                let started, previous, intervals=[];
+                const advance = now => {
+                  started ??= now;
+                  if (previous !== undefined) intervals.push(now-previous);
+                  previous = now;
+                  const progress = Math.min(1,(now-started)/milliseconds)*(points.length-1);
+                  const from = Math.min(points.length-2, Math.floor(progress));
+                  const fraction = progress-from;
+                  const a=points[from],b=points[from+1];
+                  const point = [a[0]+(b[0]-a[0])*fraction,a[1]+(b[1]-a[1])*fraction];
+                  event('pointermove',point,tray);
+                  if (progress < points.length-1) requestAnimationFrame(advance);
+                  else {
+                    event('pointerup',point,tray);
+                    window.imantoDragSamples.push({serial,intervals});
+                    window.imantoCompletedDrag=serial;
+                  }
+                };
+                requestAnimationFrame(advance);
+                return true;
+              };
+            })();
+            """
+            scripts.addUserScript(WKUserScript(source: setup, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            web.reload()
+            try await wait(web, "window.imantoCaptureLanguage === '\(language)' && document.querySelectorAll('#cells .cell').length === 25 && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
+            try await settle(0.8)
+            audio.events.removeAll()
+            let prefix = folder.appendingPathComponent("store-\(language)")
+            try Data().write(to: prefix.appendingPathExtension("start"))
+            let ready = prefix.appendingPathExtension("ready").path
+            for _ in 0..<900 {
+                if FileManager.default.fileExists(atPath: ready) { break }
+                try await settle(0.1)
+            }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: ready))
+            try await settle(0.6)
+            var marks = ["classicStart": Date().timeIntervalSince1970]
+            try await drag(web, 0, [22, 21, 7, 2], 1650, 1, 1)
+            try await drag(web, 1, [17, 16], 1350, 2, 2)
+            try await drag(web, 2, [14, 13], 1150, 3, 3)
+            try await drag(web, 0, [17, 12], 1250, 4, 4)
+            try await wait(web, "document.querySelector('#score').textContent === '50'")
+            try await settle(0.65)
+            marks["classicEnd"] = Date().timeIntervalSince1970
+            let classicStats = try await web.evaluateJavaScript("JSON.stringify(window.imantoDragSamples)") as? String ?? "[]"
+            _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('#try-six').click();true")
+            try await wait(web, "document.querySelectorAll('#cells .cell').length === 36 && document.documentElement.dataset.blockMaterial === 'special-glass' && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
+            try await settle(0.8)
+            marks["glassStart"] = Date().timeIntervalSince1970
+            try await drag(web, 0, [33, 23, 9], 1550, 1, 5)
+            try await drag(web, 1, [29, 26], 1300, 2, 6)
+            try await drag(web, 2, [28, 16], 1250, 3, 7)
+            try await drag(web, 0, [22, 17], 1200, 4, 8)
+            try await wait(web, "document.querySelector('#score').textContent === '50'")
+            try await settle(1.1)
+            marks["glassEnd"] = Date().timeIntervalSince1970
+            let glassStats = try await web.evaluateJavaScript("JSON.stringify(window.imantoDragSamples)") as? String ?? "[]"
+            let timeline: [String: Any] = [
+                "moments": marks, "effects": audio.events,
+                "dragSamples": [classicStats, glassStats]
+            ]
+            try JSONSerialization.data(withJSONObject: timeline).write(to: prefix.appendingPathExtension("timeline"))
+            try Data().write(to: prefix.appendingPathExtension("end"))
+            try await settle(0.55)
+            _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('#try-six').click();true")
+            try await wait(web, "document.querySelectorAll('#cells .cell').length === 25")
+        }
+    }
+
+    private func drag(_ web: WKWebView, _ option: Int, _ route: [Int], _ milliseconds: Int, _ turn: Int, _ serial: Int) async throws {
+        let positions = route.map { String($0) }.joined(separator: ",")
+        _ = try await web.evaluateJavaScript("window.imantoPlayDrag(\(option), [\(positions)], \(milliseconds), \(serial))")
+        try await wait(web, "window.imantoCompletedDrag === \(serial) && document.querySelector('#board').getAttribute('aria-busy') === 'false' && JSON.parse(localStorage.getItem(location.search.includes('size=6') ? 'imanto-six-game-v1' : 'krazel-imanes-main-v6')).turns === \(turn)")
+        try await settle(0.15)
+    }
+
+    private func wait(_ web: WKWebView, _ condition: String) async throws {
+        for _ in 0..<280 {
+            if !web.isLoading, let result = try? await web.evaluateJavaScript(condition), result as? Bool == true { return }
+            try await settle(0.12)
+        }
+        throw NSError(domain: "ImantoStoreGameplay", code: 1, userInfo: [NSLocalizedDescriptionKey: condition])
+    }
+
+    private func settle(_ seconds: Double) async throws {
+        try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+    }
+}
+
+@MainActor private final class StoreGameplayAudio: NSObject, WKScriptMessageHandler {
+    weak var controller: GameController?
+    var events: [[String: Any]] = []
+    init(_ controller: GameController) { self.controller = controller }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        controller?.receive(message)
+        guard let body = message.body as? [String: Any], body["kind"] as? String == "effect",
+              let cue = body["cue"] as? String, ["place", "move", "line"].contains(cue) else { return }
+        events.append(["cue": cue, "variation": body["variation"] as? Int ?? 2, "time": Date().timeIntervalSince1970])
+    }
+}
