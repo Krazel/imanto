@@ -47,7 +47,7 @@ import XCTest
               localStorage.setItem(key, JSON.stringify(state));
               window.imantoCaptureLanguage = '\(language)';
               window.imantoDragSamples = [];
-              window.imantoPlayDrag = (option, destination, milliseconds, serial) => {
+              window.imantoPlayDrag = (option, destination, milliseconds, serial, captureRate) => {
                 const tray = document.querySelector('#tray');
                 const button = document.querySelector('.choice[data-option="'+option+'"]');
                 const cells = [...document.querySelectorAll('#cells .cell')];
@@ -61,7 +61,7 @@ import XCTest
                   start[0]+dx*fraction+normal[0]*bow,
                   start[1]+dy*fraction+normal[1]*bow
                 ]);
-                const pickup=90, release=70, travel=milliseconds-pickup-release;
+                const pickup=90*captureRate, release=70*captureRate, travel=milliseconds-pickup-release;
                 const event = (type, point, target) => target.dispatchEvent(new PointerEvent(type,{
                   bubbles:true,cancelable:true,pointerType:'mouse',pointerId:19,isPrimary:true,button:0,
                   buttons:type==='pointerup'?0:1,clientX:point[0],clientY:point[1]
@@ -156,9 +156,9 @@ import XCTest
 
     private func drag(_ web: WKWebView, _ option: Int, _ destination: Int, _ milliseconds: Int, _ turn: Int, _ serial: Int) async throws {
         // Only the demonstration gesture is captured slowly; game resolution keeps its real timing.
-        let captureRate = 2.0
+        let captureRate = 4.0
         let captureMilliseconds = Int(Double(milliseconds) * captureRate)
-        _ = try await web.evaluateJavaScript("window.imantoPlayDrag(\(option), \(destination), \(captureMilliseconds), \(serial))")
+        _ = try await web.evaluateJavaScript("window.imantoPlayDrag(\(option), \(destination), \(captureMilliseconds), \(serial), \(captureRate))")
         try await wait(web, "window.imantoCompletedDrag === \(serial) && document.querySelector('#board').getAttribute('aria-busy') === 'false' && JSON.parse(localStorage.getItem(location.search.includes('size=6') ? 'imanto-six-game-v1' : 'krazel-imanes-main-v6')).turns === \(turn)")
         _ = try await web.evaluateJavaScript("Object.assign(window.imantoDragSamples.find(sample => sample.serial === \(serial)), {boardReady:Date.now()/1000,captureRate:\(captureRate),presentationDurationMs:\(milliseconds)})")
         try await settle(0.15)
