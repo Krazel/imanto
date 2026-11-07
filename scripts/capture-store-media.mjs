@@ -86,8 +86,11 @@ for(const [kind,device] of targets){
         assert(recorder.exitCode===null&&Date.now()<recordingDeadline,'Simulator did not start recording '+language);
         await sleep(150);
       }
+      const recordingStarted=Date.now()/1000;
       fs.writeFileSync(start.replace(/\.start$/,'.ready'),'');
       await waitFor('.end');
+      const timeline=JSON.parse(fs.readFileSync(start.replace(/\.start$/,'.timeline'),'utf8'));
+      fs.writeFileSync(path.join(output,kind+'-'+language+'-timeline.json'),JSON.stringify({...timeline,recordingStarted},null,2)+'\n');
       recorder.kill('SIGINT');
       await captured;
       active=null;
@@ -109,7 +112,7 @@ for(const [kind,device] of targets){
     run('xcrun',['simctl','shutdown',id]);
   }
   const count=fs.readdirSync(output).filter(name=>name.startsWith(kind+'-store-')&&name.endsWith('.png')).length;
-  assert(count>=(kind==='ipad'?7:6),'Missing native stills for '+kind);
+  assert.equal(count,8,'Missing native gameplay stills for '+kind);
 }
 const runtime=fs.readFileSync('ios/Web/index.html');
 fs.writeFileSync(path.join(output,'capture.json'),JSON.stringify({commit:process.env.GITHUB_SHA,
