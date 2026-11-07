@@ -11,6 +11,7 @@ const product = 'com.krazel.imanto';
 const languages = ['en','es'];
 const run = (command,args,cwd) => {
   const result=spawnSync(command,args,{cwd,encoding:'utf8',maxBuffer:32*1024*1024});
+  if(result.error)throw result.error;
   if(result.status!==0)throw new Error(command+' '+args[0]+' failed\n'+result.stdout+'\n'+result.stderr);
   return result.stdout.trim();
 };
@@ -39,7 +40,12 @@ for(const [kind,device] of targets){
     `platform=iOS Simulator,arch=${process.arch==='arm64'?'arm64':'x86_64'},id=${id}`,'-derivedDataPath',derived,
     '-parallel-testing-enabled','NO','-only-testing:ImantoTests/StoreMediaCapture','CODE_SIGNING_ALLOWED=NO'];
   console.log('Building store capture for',device.name);
-  run('xcodebuild',['build-for-testing',...args]);
+  const buildLogPath=path.join(output,kind+'-build.log');
+  const buildLog=fs.openSync(buildLogPath,'w');
+  const build=spawn('xcodebuild',['build-for-testing','-quiet',...args],{stdio:['ignore',buildLog,buildLog]});
+  fs.closeSync(buildLog);
+  const buildStatus=await finish(build);
+  assert.equal(buildStatus,0,fs.readFileSync(buildLogPath,'utf8').slice(-12_000));
   run('xcrun',['simctl','install',id,derived+'/Build/Products/Debug-iphonesimulator/Imanto.app']);
   const logPath=path.join(output,kind+'-capture.log');
   const log=fs.openSync(logPath,'w');
