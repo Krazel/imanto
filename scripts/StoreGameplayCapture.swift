@@ -35,9 +35,10 @@ import XCTest
               state.blockAppearance = {material:six ? 'special-glass' : 'classic', palette:'original'};
               if (six) state.board.fill(null);
               else state.board[13] = null;
-              // Crystal demonstrates four-way repulsion and transmission, without repeating a line clear.
-              const extra = six ? [[8,'teal'],[10,'honey'],[13,'coral'],[15,'violet'],[16,'teal'],
-                                   [18,'honey'],[20,'coral'],[22,'violet'],[25,'teal'],[27,'honey'],[29,'coral']]
+              // Five causal preparations: open 4, move coral 10→16→22, open 8,
+              // then push coral 14→20 to clear row 18…23 after the real pulse.
+              const extra = six ? [[1,'honey'],[2,'violet'],[4,'honey'],[8,'violet'],[10,'coral'],[13,'honey'],
+                                   [14,'coral'],[18,'coral'],[19,'coral'],[21,'coral'],[23,'coral'],[25,'teal']]
                                 : [[3,'honey'],[6,'violet'],[18,'teal'],[24,'honey']];
               for (const [index,color] of extra) state.board[index] = {id:state.nextId++,color};
               state.round = 4;
@@ -45,7 +46,7 @@ import XCTest
               state.turns = 0;
               state.combo = {count:0,lastRound:null};
               state.tray.forEach((piece,index) => piece.color = ['teal','honey','coral'][index]);
-              state.nextTray.forEach(piece => piece.color = 'coral');
+              state.nextTray.forEach((piece,index) => piece.color = six ? ['teal','honey','violet'][index] : 'coral');
               const key = six ? 'imanto-six-game-v1' : 'krazel-imanes-main-v6';
               localStorage.setItem(key, JSON.stringify(state));
               window.imantoCaptureLanguage = '\(language)';
@@ -137,12 +138,14 @@ import XCTest
             try await wait(web, "document.querySelectorAll('#cells .cell').length === 36 && document.documentElement.dataset.blockMaterial === 'special-glass' && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
             try await settle(0.8)
             marks["glassStart"] = Date().timeIntervalSince1970
-            try await drag(web, 0, 14, 1400, 1, 5)
-            try await drag(web, 1, 21, 1050, 2, 6)
-            try await drag(web, 2, 8, 1100, 3, 7)
-            try await drag(web, 0, 27, 1100, 4, 8)
-            try await wait(web, "document.querySelector('#score').textContent === '0' && JSON.parse(localStorage.getItem('imanto-six-game-v1')).score === 0")
-            try await settle(1.1)
+            try await drag(web, 0, 3, 1200, 1, 5)
+            try await drag(web, 1, 4, 1050, 2, 6)
+            try await drag(web, 2, 10, 1050, 3, 7)
+            try await drag(web, 0, 7, 1050, 4, 8)
+            try await drag(web, 1, 8, 1200, 5, 9)
+            try await wait(web, "document.querySelector('#score').textContent === '50' && JSON.parse(localStorage.getItem('imanto-six-game-v1')).score === 50")
+            // Keep a real resolved board for the editorial title fade over gameplay.
+            try await settle(2.5)
             marks["glassEnd"] = Date().timeIntervalSince1970
             let glassStats = try await web.evaluateJavaScript("JSON.stringify(window.imantoDragSamples)") as? String ?? "[]"
             let timeline: [String: Any] = [
