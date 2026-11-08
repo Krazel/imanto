@@ -8,8 +8,9 @@ import {setTimeout as sleep} from 'node:timers/promises';
 const output = 'artifacts/store-media';
 const derived = 'artifacts/StoreDerivedData';
 const product = 'com.krazel.imanto';
-const languages = ['en','es'];
 const gameplay = process.argv.includes('--gameplay');
+// Keep gameplay's recording/ready markers in lockstep with StoreGameplayCapture.
+const languages = gameplay ? ['es','en'] : ['en','es'];
 const run = (command,args,cwd) => {
   const result=spawnSync(command,args,{cwd,encoding:'utf8',maxBuffer:32*1024*1024});
   if(result.error)throw result.error;

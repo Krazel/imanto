@@ -24,7 +24,9 @@ import XCTest
         let fixtures = try ["streak", "six"].map { name in
             try String(contentsOf: XCTUnwrap(Bundle(for: Self.self).url(forResource: name, withExtension: "json")), encoding: .utf8)
         }
-        for language in ["en", "es"] {
+        // Record English after the first complete material pass has warmed the renderer.
+        // capture-store-media.mjs must use the same ordering for its marker handshake.
+        for language in ["es", "en"] {
             scripts.removeAllUserScripts()
             original.forEach { scripts.addUserScript($0) }
             let setup = """
@@ -136,7 +138,18 @@ import XCTest
             let classicStats = try await web.evaluateJavaScript("JSON.stringify(window.imantoDragSamples)") as? String ?? "[]"
             _ = try await web.evaluateJavaScript("document.querySelector('#pause').click();document.querySelector('#try-six').click();true")
             try await wait(web, "document.querySelectorAll('#cells .cell').length === 36 && document.documentElement.dataset.blockMaterial === 'special-glass' && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
-            try await settle(0.8)
+            // Commit the first glass frame before its first gesture. The prior cold
+            // English capture had stale compositor frames despite aria-busy=false.
+            // This only warms rendering; no game move, score or physics is altered.
+            _ = try await web.evaluateJavaScript("window.imantoGlassPaintReady=false;requestAnimationFrame(()=>requestAnimationFrame(()=>window.imantoGlassPaintReady=true));true")
+            try await wait(web, "window.imantoGlassPaintReady === true")
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                web.takeSnapshot(with: nil) { _, error in
+                    if let error { continuation.resume(throwing: error) }
+                    else { continuation.resume(returning: ()) }
+                }
+            }
+            try await settle(1.2)
             marks["glassStart"] = Date().timeIntervalSince1970
             try await drag(web, 0, 3, 1200, 1, 5)
             try await drag(web, 1, 4, 1050, 2, 6)
