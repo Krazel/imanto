@@ -33,8 +33,11 @@ import XCTest
               const six = new URLSearchParams(location.search).get('size') === '6';
               const state = six ? \(fixtures[1]) : \(fixtures[0]);
               state.blockAppearance = {material:six ? 'special-glass' : 'classic', palette:'original'};
-              state.board[six ? 16 : 13] = null;
-              const extra = six ? [[2,'teal'],[7,'honey'],[21,'violet'],[27,'teal'],[32,'honey']]
+              if (six) state.board.fill(null);
+              else state.board[13] = null;
+              // Crystal demonstrates four-way repulsion and transmission, without repeating a line clear.
+              const extra = six ? [[8,'teal'],[10,'honey'],[13,'coral'],[15,'violet'],[16,'teal'],
+                                   [18,'honey'],[20,'coral'],[22,'violet'],[25,'teal'],[27,'honey'],[29,'coral']]
                                 : [[3,'honey'],[6,'violet'],[18,'teal'],[24,'honey']];
               for (const [index,color] of extra) state.board[index] = {id:state.nextId++,color};
               state.round = 4;
@@ -134,11 +137,11 @@ import XCTest
             try await wait(web, "document.querySelectorAll('#cells .cell').length === 36 && document.documentElement.dataset.blockMaterial === 'special-glass' && document.querySelector('#board').getAttribute('aria-busy') === 'false'")
             try await settle(0.8)
             marks["glassStart"] = Date().timeIntervalSince1970
-            try await drag(web, 0, 9, 1400, 1, 5)
-            try await drag(web, 1, 26, 1050, 2, 6)
-            try await drag(web, 2, 16, 1100, 3, 7)
-            try await drag(web, 0, 17, 1100, 4, 8)
-            try await wait(web, "document.querySelector('#score').textContent === '50'")
+            try await drag(web, 0, 14, 1400, 1, 5)
+            try await drag(web, 1, 21, 1050, 2, 6)
+            try await drag(web, 2, 8, 1100, 3, 7)
+            try await drag(web, 0, 27, 1100, 4, 8)
+            try await wait(web, "document.querySelector('#score').textContent === '0' && JSON.parse(localStorage.getItem('imanto-six-game-v1')).score === 0")
             try await settle(1.1)
             marks["glassEnd"] = Date().timeIntervalSince1970
             let glassStats = try await web.evaluateJavaScript("JSON.stringify(window.imantoDragSamples)") as? String ?? "[]"
