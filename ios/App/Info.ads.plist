@@ -248,7 +248,5 @@
 			<string>3qcr597p9d.skadnetwork</string>
 		</dict>
 	</array>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>With your permission, Google may use your device identifier to personalize ads and measure advertising across apps and websites.</string>
 </dict>
 </plist>

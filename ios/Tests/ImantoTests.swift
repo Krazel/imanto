@@ -29,6 +29,7 @@ import AVFoundation
         XCTAssertEqual(cues.count, 5)
     }
     func testBundledAudioAndMutePolicy() {
+        XCTAssertNil(Bundle.main.object(forInfoDictionaryKey: "NSUserTrackingUsageDescription"), "The distributed app must not declare a tracking prompt it does not request")
         let audio = NativeAudio()
         XCTAssertNil(audio.lastError)
         XCTAssertEqual(Set(audio.pools.keys), Set(["button", "place", "place-0", "place-1", "place-3", "place-4", "move", "line"]))

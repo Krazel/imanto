@@ -67,6 +67,7 @@ try {
   assert.equal(info.CFBundleShortVersionString, cfg.marketingVersion);
   assert.equal(String(info.CFBundleVersion), String(cfg.buildNumber));
   assert.equal(info.ITSAppUsesNonExemptEncryption, false);
+  assert.equal(info.NSUserTrackingUsageDescription, undefined, 'Unused ATT permission must not enter a distributed archive');
   assert.equal(info.CFBundleExecutable, 'Imanto');
   const advertising = verifyAdArchive({destination, info, executable:fs.readFileSync(path.join(app, info.CFBundleExecutable))});
   assert(Number(info.DTSDKName.match(/\d+/)[0]) >= 26, 'iOS 26 SDK required');

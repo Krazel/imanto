@@ -1,1 +1,1 @@
-"NSUserTrackingUsageDescription" = "Con tu permiso, Google puede usar el identificador del dispositivo para personalizar anuncios y medir publicidad entre apps y sitios web.";
+// Imanto does not request App Tracking Transparency.
