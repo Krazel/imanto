@@ -71,6 +71,8 @@ import AVFoundation
         XCTAssertEqual(values["overflow"] as? Bool, false)
         XCTAssertEqual(values["tiles"] as? Int, 3)
         let before = try await web.evaluateJavaScript("JSON.parse(localStorage.getItem('krazel-imanes-main-v6')).turns") as? Int
+        // A new player acknowledges the tutorial before interacting with the board.
+        _ = try await web.evaluateJavaScript("if(document.querySelector('#instructions').open)document.querySelector('#close-help').click();true")
         _ = try await web.evaluateJavaScript("document.querySelector('#tray button:not(:disabled)').click(); document.querySelector('#cells button:not(:disabled)').click(); true")
         for _ in 0..<100 {
             try await Task.sleep(nanoseconds: 100_000_000)
