@@ -471,6 +471,20 @@ $('#restart-no').addEventListener('click',()=>{restartConfirm.close();menu.close
 restartConfirm.addEventListener('cancel',()=>queueMicrotask(()=>openMenu(false)));
 const openHelp=()=>{clearPreview();help.showModal();};$('#menu-help').addEventListener('click',openHelp);$('#close-help').addEventListener('click',()=>help.close());
 $('#help-close-icon').addEventListener('click',()=>help.close());
+// Shared by both board sizes; acknowledging or dismissing help counts as seen.
+const TUTORIAL_SEEN_KEY='imanto-tutorial-seen-v1';
+const startupParams=new URLSearchParams(location.search);
+const reviewTutorial=IS_MAIN&&startupParams.get('tutorial')==='1'&&!startupParams.has('screen');
+let tutorialSeen=false;
+try{tutorialSeen=storage.getItem(TUTORIAL_SEEN_KEY)==='done';}catch{}
+help.addEventListener('close',()=>{
+  if(IS_MAIN)try{storage.setItem(TUTORIAL_SEEN_KEY,'done');}catch{}
+  if(reviewTutorial){
+    if(reviveStatus(state)==='earned')selectReviveTile();
+    else if(blockRemovalStatus(state)==='earned')selectReviveTile('remove');
+    else if(state.over&&!menu.open)openMenu(true);
+  }
+});
 renderBoard(state.board);renderTray();showScore(state.score);lab?.showStats(state.board);persist();
 if(migrated&&!IS_MAIN)status.textContent=t('Partida elegida conservada · sin desvíos');
 async function checkInitial(){
@@ -478,12 +492,14 @@ async function checkInitial(){
   state=applyLineCheck(state,await checkLines(state,physics));persist();busy=false;
   renderBoard(state.board);renderTray();$('#pause').disabled=false;effectRoom?.setBusy(false);setQuickBusy(false);boardEl.setAttribute('aria-busy','false');
   status.textContent=state.over?t('No quedan líneas posibles'):idleMessage();
-  if(IS_MAIN&&reviveStatus(state)==='earned')selectReviveTile();
+  if(reviewTutorial)openHelp();
+  else if(IS_MAIN&&reviveStatus(state)==='earned')selectReviveTile();
   else if(IS_MAIN&&blockRemovalStatus(state)==='earned')selectReviveTile('remove');
   else if(state.over)openMenu(true);
   else if(!IS_EFFECTS&&!IS_LAB&&!VARIANT){
     const screen=new URLSearchParams(location.search).get('screen');
-    if(screen==='pause')openMenu(false);if(screen==='help')help.showModal();if(screen==='restart')restartConfirm.showModal();
+    if(screen==='pause')openMenu(false);if(screen==='help')openHelp();if(screen==='restart')restartConfirm.showModal();
+    if(!screen&&!tutorialSeen&&!guidanceSeen&&state.turns===0)openHelp();
   }
 }
 if(!IS_LAB&&(!IS_EFFECTS||effectParam==='1'))checkInitial();

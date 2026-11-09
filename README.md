@@ -1,6 +1,6 @@
 # Imanto
 
-Color puzzle by Krazel Games. Native iOS candidate 0.23 (1), English/Spanish.
+Color puzzle by Krazel Games. Native iOS candidate 0.25 (1), English/Spanish.
 Ten block styles across five palettes, including origami, neon, dichroic glass,
 liquid capsule, kinetic sand and light circuit. Settings starts with the style
 list collapsed; select all, keep only classic, or choose a fixed style or subset.
